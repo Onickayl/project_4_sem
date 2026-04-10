@@ -1,6 +1,8 @@
 #include "leaf.hpp"
 #include <cstdlib>
 #include <cmath>
+#include <algorithm>
+#include <iostream>
 
 
 // инициализация листьев
@@ -30,7 +32,7 @@ void init_Leaves(Leaf leaves[], size_t leaves_count, Branch branches[], size_t b
         leaves[i].anthocyanin = 0;
         leaves[i].water = 100;
         leaves[i].sugar = 50;
-        leaves[i].stickiness = 100;
+        leaves[i].stickiness = 60 + (rand() % 40);
         leaves[i].is_alive = 1;
 
         // Запоминаем, на какой ветке висит
@@ -42,24 +44,25 @@ void init_Leaves(Leaf leaves[], size_t leaves_count, Branch branches[], size_t b
 }
 
 // Рисование листьев
-void draw_Leaves(sf::RenderWindow& window, Leaf leaves[], size_t leaves_count) 
+void draw_Leaves(sf::RenderWindow &window, Leaf leaves[], size_t leaves_count)
 {
-    for (int i = 0; i < leaves_count; i++) 
+    for (int i = 0; i < leaves_count; i++)
     {
-        if (leaves[i].is_alive) 
-        {
-            // Создаём кружок с радиусом 5 пикселей
-            sf::CircleShape leafShape(5.0f);
-            
-            // Ставим в нужное место (например, x=400, y=300)
-            leafShape.setPosition(leaves[i].x, leaves[i].y);
 
-            /*
-            leaf.setScale(1.8f, 0.6f);        // растянуть в овал
-            leaf.setRotation(rand() % 360);   // случайный поворот
-            */
-            
-            // Цвет зависит от хлорофилла
+        // Создаём кружок с радиусом 5 пикселей
+        sf::CircleShape leafShape(5.0f);
+
+        // Ставим в нужное место (например, x=400, y=300)
+        leafShape.setPosition(leaves[i].x, leaves[i].y);
+
+        /*
+        leaf.setScale(1.8f, 0.6f);        // растянуть в овал
+        leaf.setRotation(rand() % 360);   // случайный поворот
+        */
+
+        if (leaves[i].is_alive)
+        {
+            // Цвет для живых - меняется
             if (leaves[i].chlorophyll > 70)
             {
                 leafShape.setFillColor(sf::Color::Green);
@@ -68,87 +71,144 @@ void draw_Leaves(sf::RenderWindow& window, Leaf leaves[], size_t leaves_count)
             {
                 leafShape.setFillColor(sf::Color::Yellow);
             }
-            else
+            else if (leaves[i].anthocyanin > 15 && sun > 40)
             {
                 leafShape.setFillColor(sf::Color::Red);
             }
-                
-            window.draw(leafShape);
+            else
+            {
+                leafShape.setFillColor(sf::Color::Yellow);
+            }
         }
+        else
+        {
+            // Цвет для мёртвых листьев - не меняется
+            if (leaves[i].chlorophyll > 70)
+            {
+                leafShape.setFillColor(sf::Color::Green);
+            }
+            else if (leaves[i].chlorophyll > 40)
+            {
+                leafShape.setFillColor(sf::Color::Yellow);
+            }
+            else if (leaves[i].anthocyanin > 15 && sun > 40)
+            {
+                leafShape.setFillColor(sf::Color::Red);
+            }
+            else
+            {
+                leafShape.setFillColor(sf::Color::Yellow);
+            }
+        }
+
+        window.draw(leafShape);
     }
 }
 
 void update_leaf(Leaf leaves[], size_t leaves_count)
 {
-    /*
+/*
 Уменьшает хлорофилл от солнца и холода
 Увеличивает антоцианы при наличии сахара, холода и солнца
 Каротиноиды всегда постоянны
-
 Результат: листья меняют цвет в зависимости от погоды
-    */
+
+Дождь увеличивает прилипчивость, ветер уменьшает
+Если stickiness < 20% — лист падает
+Результат: Листья отрываются и падают
+*/
 
     for (int i = 0; i < leaves_count; i++)
     {
         if (leaves[i].is_alive)
         {
-// Влияние солнца на хлорофилл
-            // Яркое солнце разрушает хлорофилл
-            if (sun > 70)
+            // нормализация (0-1)
+            float S = sun / 100.0f;          
+            float T = (temp + 10.0f) / 40.0f; 
+            if (T < 0) 
             {
-                leaves[i].chlorophyll -= 0.5f; // медленное уменьшение
+                T = 0;
             }
-            // Умеренное солнце + вода восстанавливают хлорофилл
-            else if (sun > 30 && leaves[i].water > 50)
+            if (T > 1) 
             {
-                leaves[i].chlorophyll += 0.3f;
+                T = 1;
+            }
+            float W = leaves[i].water / 100.0f;
+            float Sugar = leaves[i].sugar / 100.0f;
+
+// Хлорофилл (зеленый)
+            
+            float optimal_sun = 1.0f - 2.0f * (S - 0.5f) * (S - 0.5f);      // пик при 50%
+            float optimal_temp = 1.0f - (T - 0.75f) * (T - 0.75f) * 3.0f;   // пик при 20°C
+
+            leaves[i].chlorophyll = 100.0f * optimal_sun * optimal_temp * W;
+
+// Антоцианы (красный)
+
+            float cold_stress = exp(- (T * T) / 0.15f);
+            float antho = 2.0f * S * cold_stress * Sugar * W;
+            leaves[i].anthocyanin += antho;
+
+
+// Прилипчивость
+            if (wind < 80) 
+            {
+                // при слабом ветре прилипчивость почти не меняется
+                leaves[i].stickiness -= wind * 0.002f;
+            } else 
+            {
+                // при сильном ветре листья начинают срываться
+                leaves[i].stickiness -= wind * 0.05f;
+            }
+            
+            // дождь увеличивает прилипчивость
+            leaves[i].stickiness += rain * 0.03f;
+            
+// Отрыв 
+            if (leaves[i].stickiness < 20) 
+            {
+                leaves[i].is_alive = 0;
             }
 
-// Влияние температуры
-            // Холод ускоряет разрушение хлорофилла
-            if (temp < 10)
-            {
-                leaves[i].chlorophyll -= 0.4f;
-            }
-            // Тепло замедляет разрушение
-            else if (temp > 20)
-            {
-                leaves[i].chlorophyll += 0.2f;
-            }
-
-// Образование антоцианов (красный цвет)
-            // Условия: холод + солнце + много сахара
-            if (temp < 5 && sun > 50 && leaves[i].sugar > 60)
-            {
-                leaves[i].anthocyanin += 0.8f;
-            }
-            // Медленное накопление в обычных условиях
-            else if (temp < 15 && sun > 40)
-            {
-                leaves[i].anthocyanin += 0.2f;
-            }
 
 // ограничиваем значения
-            if (leaves[i].chlorophyll > 100)
-            {
-                leaves[i].chlorophyll = 100;
-            }
-
-            if (leaves[i].chlorophyll < 0)
-            {
-                leaves[i].chlorophyll = 0;
-            }
-
-            if (leaves[i].anthocyanin > 100)
-            {
-                leaves[i].anthocyanin = 100;
-            }
+            leaves[i].chlorophyll = std::max(0.0f, std::min(100.0f, leaves[i].chlorophyll));
+            leaves[i].anthocyanin = std::max(0.0f, std::min(100.0f, leaves[i].anthocyanin));
+            leaves[i].stickiness = std::max(0.0f, std::min(100.0f, leaves[i].stickiness));
                 
-            if (leaves[i].anthocyanin < 0)
+        }
+    }
+}
+
+void update_falling_leaves(Leaf leaves[], size_t leaves_count, float deltaTime)
+{
+    for (int i = 0; i < leaves_count; i++)
+    {
+        if (!leaves[i].is_alive && leaves[i].y < 590)
+        {
+            // увеличиваем координату 'y' на 15*deltaTime пикселя за кадр
+            leaves[i].y += 15.0f * deltaTime;
+            // медленнное падение 15 -> 8
+            // быстрое падение 15 -> 50
+
+            // Покачивание (20 пикселей в секунду)
+            leaves[i].x += ((rand() % 5) - 2) * 20.0f * deltaTime;
+            // случайно двигается -2 0 +2
+
+            // Не выходим за границы
+            if (leaves[i].x < 0)
             {
-                leaves[i].anthocyanin = 0;
+                leaves[i].x = 0;
             }
-                
+            if (leaves[i].x > 800)
+            {
+                leaves[i].x = 800;
+            }
+        }
+
+        if (!leaves[i].is_alive && leaves[i].y >= 600)
+        {
+            leaves[i].y = 590;
         }
     }
 }
