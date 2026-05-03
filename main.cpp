@@ -10,10 +10,11 @@ int main()
 {
     // g++ -std=c++17 main.cpp branch.cpp leaf.cpp weather.cpp -o autumn -lsfml-graphics -lsfml-window -lsfml-system && ./autumn
 
+
     srand(time(nullptr));
 
-    size_t leaves_count = 160;
-    Leaf leaves[160];
+    size_t num_leaf = 160;
+    std::vector<Leaf> leaves;
 
     size_t branch_count = 4;
     Branch branches[4];
@@ -60,7 +61,7 @@ int main()
     init_Branches(branches, branch_count);
 
     // инициализация листьев
-    init_Leaves(leaves, leaves_count, branches, branch_count);
+    init_Leaves(leaves, branches, branch_count, num_leaf);
 
 
     // Главный цикл. Программа крутится здесь, пока окно открыто
@@ -156,7 +157,7 @@ int main()
         }
 
         // обновление листьев
-        update_leaf(leaves, leaves_count);
+        update_leaf(leaves);
         
 
         // получаем время с прошлого кадра
@@ -173,7 +174,7 @@ int main()
         }
 
         // листопад
-        update_falling_leaves(leaves, leaves_count, deltaTime);
+        update_falling_leaves(leaves, deltaTime);
 
         // Заливаем всё окно тёмно-синим цветом.
         window.clear(sf::Color(20, 30, 50)); // RGB: 20,30,50
@@ -181,7 +182,7 @@ int main()
         // рисуем
         window.draw(trunk);
         draw_Branch(window, branches, branch_count);
-        draw_Leaves(window, leaves, leaves_count);
+        draw_Leaves(window, leaves);
 
         // собираем строку
         std::string text = "Sun: " + std::to_string((int)sun) + "%  " +

@@ -6,10 +6,15 @@
 
 
 // инициализация листьев
-void init_Leaves(Leaf leaves[], size_t leaves_count, Branch branches[], size_t branch_count) 
+void init_Leaves(std::vector<Leaf>& leaves, Branch branches[], size_t branch_count, size_t num_leaf) 
 {
-    for (int i = 0; i < leaves_count; i++) 
+
+    leaves.clear();  // очищаем, если там что-то было
+    leaves.reserve(num_leaf); // выделяем память
+
+    for (int i = 0; i < num_leaf; i++) 
     {
+        Leaf leaf;
         // Выбираем случайную ветку
         int branchNum = rand() % branch_count;
         
@@ -20,58 +25,61 @@ void init_Leaves(Leaf leaves[], size_t leaves_count, Branch branches[], size_t b
         float dx = branches[branchNum].endX - branches[branchNum].startX;
         float dy = branches[branchNum].endY - branches[branchNum].startY;
 
-        leaves[i].x = branches[branchNum].startX + t * dx;
-        leaves[i].y = branches[branchNum].startY + t * dy;
+        leaf.x = branches[branchNum].startX + t * dx;
+        leaf.y = branches[branchNum].startY + t * dy;
 
         // Маленькое случайное смещение от -4 до 4
-        leaves[i].x += (rand() % 9) - 4;
-        leaves[i].y += (rand() % 9) - 4;
+        leaf.x += (rand() % 9) - 4;
+        leaf.y += (rand() % 9) - 4;
 
-        leaves[i].chlorophyll = 100;
-        leaves[i].carotenoids = 50;
-        leaves[i].anthocyanin = 0;
-        leaves[i].water = 100;
-        leaves[i].sugar = 50;
-        leaves[i].stickiness = 60 + (rand() % 40);
-        leaves[i].is_alive = 1;
+        leaf.chlorophyll = 100;
+        leaf.carotenoids = 50;
+        leaf.anthocyanin = 0;
+        leaf.water = 100;
+        leaf.sugar = 50;
+        leaf.stickiness = 60 + (rand() % 40);
+        leaf.is_alive = 1;
 
         // Запоминаем, на какой ветке висит
-        leaves[i].branchIndex = branchNum;
-        leaves[i].positionOnBranch = t;
+        leaf.branchIndex = branchNum;
+        leaf.positionOnBranch = t;
         
         branches[branchNum].leafCount++;
+        
+        leaves.push_back(leaf);
     }
+
+    
 }
 
 // Рисование листьев
-void draw_Leaves(sf::RenderWindow &window, Leaf leaves[], size_t leaves_count)
+void draw_Leaves(sf::RenderWindow &window, const std::vector<Leaf>& leaves)
 {
-    for (int i = 0; i < leaves_count; i++)
+    // Создаём кружок с радиусом 5 пикселей
+    sf::CircleShape leafShape(5.0f);
+
+    for (const auto& leaf : leaves) 
     {
-
-        // Создаём кружок с радиусом 5 пикселей
-        sf::CircleShape leafShape(5.0f);
-
         // Ставим в нужное место (например, x=400, y=300)
-        leafShape.setPosition(leaves[i].x, leaves[i].y);
+        leafShape.setPosition(leaf.x, leaf.y);
 
         /*
         leaf.setScale(1.8f, 0.6f);        // растянуть в овал
         leaf.setRotation(rand() % 360);   // случайный поворот
         */
 
-        if (leaves[i].is_alive)
+        if (leaf.is_alive)
         {
             // Цвет для живых - меняется
-            if (leaves[i].chlorophyll > 70)
+            if (leaf.chlorophyll > 70)
             {
                 leafShape.setFillColor(sf::Color::Green);
             }
-            else if (leaves[i].chlorophyll > 40)
+            else if (leaf.chlorophyll > 40)
             {
                 leafShape.setFillColor(sf::Color::Yellow);
             }
-            else if (leaves[i].anthocyanin > 15 && sun > 40)
+            else if (leaf.anthocyanin > 15 && sun > 40)
             {
                 leafShape.setFillColor(sf::Color::Red);
             }
@@ -83,15 +91,15 @@ void draw_Leaves(sf::RenderWindow &window, Leaf leaves[], size_t leaves_count)
         else
         {
             // Цвет для мёртвых листьев - не меняется
-            if (leaves[i].chlorophyll > 70)
+            if (leaf.chlorophyll > 70)
             {
                 leafShape.setFillColor(sf::Color::Green);
             }
-            else if (leaves[i].chlorophyll > 40)
+            else if (leaf.chlorophyll > 40)
             {
                 leafShape.setFillColor(sf::Color::Yellow);
             }
-            else if (leaves[i].anthocyanin > 15 && sun > 40)
+            else if (leaf.anthocyanin > 15 && sun > 40)
             {
                 leafShape.setFillColor(sf::Color::Red);
             }
@@ -105,7 +113,7 @@ void draw_Leaves(sf::RenderWindow &window, Leaf leaves[], size_t leaves_count)
     }
 }
 
-void update_leaf(Leaf leaves[], size_t leaves_count)
+void update_leaf(std::vector<Leaf>& leaves)
 {
 /*
 Уменьшает хлорофилл от солнца и холода
@@ -118,9 +126,9 @@ void update_leaf(Leaf leaves[], size_t leaves_count)
 Результат: Листья отрываются и падают
 */
 
-    for (int i = 0; i < leaves_count; i++)
+    for (auto& leaf : leaves) 
     {
-        if (leaves[i].is_alive)
+        if (leaf.is_alive)
         {
             // нормализация (0-1)
             float S = sun / 100.0f;          
@@ -133,82 +141,82 @@ void update_leaf(Leaf leaves[], size_t leaves_count)
             {
                 T = 1;
             }
-            float W = leaves[i].water / 100.0f;
-            float Sugar = leaves[i].sugar / 100.0f;
+            float W = leaf.water / 100.0f;
+            float Sugar = leaf.sugar / 100.0f;
 
 // Хлорофилл (зеленый)
             
             float optimal_sun = 1.0f - 2.0f * (S - 0.5f) * (S - 0.5f);      // пик при 50%
             float optimal_temp = 1.0f - (T - 0.75f) * (T - 0.75f) * 3.0f;   // пик при 20°C
 
-            leaves[i].chlorophyll = 100.0f * optimal_sun * optimal_temp * W;
+            leaf.chlorophyll = 100.0f * optimal_sun * optimal_temp * W;
 
 // Антоцианы (красный)
 
             float cold_stress = exp(- (T * T) / 0.15f);
             float antho = 2.0f * S * cold_stress * Sugar * W;
-            leaves[i].anthocyanin += antho;
+            leaf.anthocyanin += antho;
 
 
 // Прилипчивость
             if (wind < 80) 
             {
                 // при слабом ветре прилипчивость почти не меняется
-                leaves[i].stickiness -= wind * 0.002f;
+                leaf.stickiness -= wind * 0.002f;
             } else 
             {
                 // при сильном ветре листья начинают срываться
-                leaves[i].stickiness -= wind * 0.05f;
+                leaf.stickiness -= wind * 0.05f;
             }
             
             // дождь увеличивает прилипчивость
-            leaves[i].stickiness += rain * 0.03f;
+            leaf.stickiness += rain * 0.03f;
             
 // Отрыв 
-            if (leaves[i].stickiness < 20) 
+            if (leaf.stickiness < 20) 
             {
-                leaves[i].is_alive = 0;
+                leaf.is_alive = 0;
             }
 
 
 // ограничиваем значения
-            leaves[i].chlorophyll = std::max(0.0f, std::min(100.0f, leaves[i].chlorophyll));
-            leaves[i].anthocyanin = std::max(0.0f, std::min(100.0f, leaves[i].anthocyanin));
-            leaves[i].stickiness = std::max(0.0f, std::min(100.0f, leaves[i].stickiness));
+            leaf.chlorophyll = std::max(0.0f, std::min(100.0f, leaf.chlorophyll));
+            leaf.anthocyanin = std::max(0.0f, std::min(100.0f, leaf.anthocyanin));
+            leaf.stickiness = std::max(0.0f, std::min(100.0f, leaf.stickiness));
                 
         }
     }
 }
 
-void update_falling_leaves(Leaf leaves[], size_t leaves_count, float deltaTime)
+void update_falling_leaves(std::vector<Leaf>& leaves, float deltaTime)
 {
-    for (int i = 0; i < leaves_count; i++)
+    for (auto& leaf : leaves) 
     {
-        if (!leaves[i].is_alive && leaves[i].y < 590)
+        if (!leaf.is_alive && leaf.y < 590)
         {
             // увеличиваем координату 'y' на 15*deltaTime пикселя за кадр
-            leaves[i].y += 15.0f * deltaTime;
+            leaf.y += 15.0f * deltaTime;
             // медленнное падение 15 -> 8
             // быстрое падение 15 -> 50
 
             // Покачивание (20 пикселей в секунду)
-            leaves[i].x += ((rand() % 5) - 2) * 20.0f * deltaTime;
+            leaf.x += ((rand() % 5) - 2) * 20.0f * deltaTime;      // leaf.pos.x += sin(leaf.pos.y * 0.1f) * 20.0f * deltaTime; // Покачивание
             // случайно двигается -2 0 +2
 
             // Не выходим за границы
-            if (leaves[i].x < 0)
+            if (leaf.x < 0)
             {
-                leaves[i].x = 0;
+                leaf.x = 0;
             }
-            if (leaves[i].x > 800)
+            if (leaf.x > 800)
             {
-                leaves[i].x = 800;
+                leaf.x = 800;
             }
         }
 
-        if (!leaves[i].is_alive && leaves[i].y >= 600)
+        if (!leaf.is_alive && leaf.y >= 600)
         {
-            leaves[i].y = 590;
+           // leaf.y = 590;
         }
     }
 }
