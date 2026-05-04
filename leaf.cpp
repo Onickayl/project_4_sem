@@ -6,7 +6,7 @@
 
 
 // инициализация листьев
-void init_Leaves(std::vector<Leaf>& leaves, Branch branches[], size_t branch_count, size_t num_leaf) 
+void init_Leaves(std::vector<Leaf>& leaves, std::vector<Branch>& branches, size_t num_leaf) 
 {
 
     leaves.clear();  // очищаем, если там что-то было
@@ -16,7 +16,7 @@ void init_Leaves(std::vector<Leaf>& leaves, Branch branches[], size_t branch_cou
     {
         Leaf leaf;
         // Выбираем случайную ветку
-        int branchNum = rand() % branch_count;
+        int branchNum = rand() % branches.size();
         
         // Вычисляем позицию на ветке
         float t = (rand() % 100) / 100.0; // от 0 до 1

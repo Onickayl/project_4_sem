@@ -14,8 +14,8 @@ struct Branch
     int leafCount;          // сколько листьев на этой ветке
 };
 
-void init_Branches(Branch branches[], size_t branch_count);
-void draw_Branch(sf::RenderWindow& window, Branch branches[], size_t branch_count);
+void init_Branches(std::vector<Branch>& branches, size_t num_branch);
+void draw_Branch(sf::RenderWindow& window, std::vector<Branch>& branches);
 
 
 #endif

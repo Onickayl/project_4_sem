@@ -26,7 +26,7 @@ struct Leaf
     float positionOnBranch; // 0-1, где именно на ветке
 };
 
-void init_Leaves(std::vector<Leaf>& leaves, Branch branches[], size_t branch_count, size_t num_leaf);
+void init_Leaves(std::vector<Leaf>& leaves, std::vector<Branch>& branches, size_t num_leaf);
 void draw_Leaves(sf::RenderWindow& window, const std::vector<Leaf>& leaves);
 void update_leaf(std::vector<Leaf>& leaves);
 void update_falling_leaves(std::vector<Leaf>& leaves, float deltaTime);

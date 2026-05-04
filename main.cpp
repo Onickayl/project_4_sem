@@ -16,8 +16,8 @@ int main()
     size_t num_leaf = 160;
     std::vector<Leaf> leaves;
 
-    size_t branch_count = 4;
-    Branch branches[4];
+    size_t num_branch = 16;
+    std::vector<Branch> branches;
 
     // Создаём окно 800x600 с названием "autumn". Переменная window — это окно.
     sf::RenderWindow window(sf::VideoMode(800, 600), "autumn");
@@ -58,10 +58,10 @@ int main()
     trunk.setFillColor(sf::Color(139, 69, 19));
 
     // инициализация веток
-    init_Branches(branches, branch_count);
+    init_Branches(branches, num_branch);
 
     // инициализация листьев
-    init_Leaves(leaves, branches, branch_count, num_leaf);
+    init_Leaves(leaves, branches, num_leaf);
 
 
     // Главный цикл. Программа крутится здесь, пока окно открыто
@@ -181,7 +181,7 @@ int main()
 
         // рисуем
         window.draw(trunk);
-        draw_Branch(window, branches, branch_count);
+        draw_Branch(window, branches);
         draw_Leaves(window, leaves);
 
         // собираем строку
