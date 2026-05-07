@@ -6,11 +6,23 @@
 #include "branch.hpp"
 #include "weather.hpp" 
 
+enum class LeafState 
+{
+   Bud,      // почка (весна)
+   Growing,  // растет
+   Mature,   // взрослый лист (лето)
+   Falling,  // падает (осень)
+   Dead      // лежит на земле
+};
+
 
 struct Leaf
 {
     float x;                // координата x
     float y;                // координата y
+
+    float size = 1.0f;      // текущий размер (будет расти весной)
+    LeafState state;        // статус листа (в каком состоянии сейчас находится)
 
     float water;            // кол-во воды          0-100%
     float sugar;            // кол-во сахара        0-100%
@@ -20,15 +32,14 @@ struct Leaf
     float anthocyanin;      // кол-во антоциан      0-100% (красный)
     float stickiness;       // прилипчивость        0-100%
 
-    int is_alive;           // жив - 1, мёртв - 0
-
     int branchIndex;        // номер ветки, на которой висит лист
     float positionOnBranch; // 0-1, где именно на ветке
 };
 
 void init_Leaves(std::vector<Leaf>& leaves, std::vector<Branch>& branches, size_t num_leaf);
 void draw_Leaves(sf::RenderWindow& window, const std::vector<Leaf>& leaves);
-void update_leaf(std::vector<Leaf>& leaves);
-void update_falling_leaves(std::vector<Leaf>& leaves, float deltaTime);
+void update_leaf(std::vector<Leaf>& leaves, float deltaTime);
+void mature(Leaf& leaf);
+//void update_falling_leaves(std::vector<Leaf>& leaves, float deltaTime);
 
 #endif

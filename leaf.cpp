@@ -9,8 +9,8 @@
 void init_Leaves(std::vector<Leaf>& leaves, std::vector<Branch>& branches, size_t num_leaf) 
 {
 
-    leaves.clear();  // очищаем, если там что-то было
-    leaves.reserve(num_leaf); // выделяем память
+    leaves.clear();             // очищаем, если там что-то было
+    leaves.reserve(num_leaf);   // выделяем память
 
     for (int i = 0; i < num_leaf; i++) 
     {
@@ -32,13 +32,14 @@ void init_Leaves(std::vector<Leaf>& leaves, std::vector<Branch>& branches, size_
         leaf.x += (rand() % 9) - 4;
         leaf.y += (rand() % 9) - 4;
 
+    /*!!!!!!!!!поменять значения для почки!!!!!!!!!!!!!!!!!!!*/
         leaf.chlorophyll = 100;
         leaf.carotenoids = 50;
         leaf.anthocyanin = 0;
         leaf.water = 100;
         leaf.sugar = 50;
         leaf.stickiness = 60 + (rand() % 40);
-        leaf.is_alive = 1;
+        leaf.state = LeafState::Bud;
 
         // Запоминаем, на какой ветке висит
         leaf.branchIndex = branchNum;
@@ -55,22 +56,42 @@ void init_Leaves(std::vector<Leaf>& leaves, std::vector<Branch>& branches, size_
 // Рисование листьев
 void draw_Leaves(sf::RenderWindow &window, const std::vector<Leaf>& leaves)
 {
-    // Создаём кружок с радиусом 5 пикселей
-    sf::CircleShape leafShape(5.0f);
+    // Создаём кружок с радиусом 1 пиксель - пустышка
+    sf::CircleShape leafShape(1.0f);
 
     for (const auto& leaf : leaves) 
     {
+        // устанавливаем нужный размер
+        leafShape.setRadius(leaf.size);
+        
         // Ставим в нужное место (например, x=400, y=300)
         leafShape.setPosition(leaf.x, leaf.y);
 
-        /*
-        leaf.setScale(1.8f, 0.6f);        // растянуть в овал
-        leaf.setRotation(rand() % 360);   // случайный поворот
-        */
 
-        if (leaf.is_alive)
+        if (leaf.state == LeafState::Dead || leaf.state == LeafState::Falling) 
         {
-            // Цвет для живых - меняется
+// Цвет для мёртвых листьев - не меняется
+            if (leaf.chlorophyll > 70)
+            {
+                leafShape.setFillColor(sf::Color::Green);
+            }
+            else if (leaf.chlorophyll > 40)
+            {
+                leafShape.setFillColor(sf::Color::Yellow);
+            }
+            else if (leaf.anthocyanin > 15 && sun > 40)
+            {
+                leafShape.setFillColor(sf::Color::Red);
+            }
+            else
+            {
+                leafShape.setFillColor(sf::Color::Yellow);
+            }
+
+        } 
+        else 
+        {
+// Цвет для живых - меняется
             if (leaf.chlorophyll > 70)
             {
                 leafShape.setFillColor(sf::Color::Green);
@@ -88,135 +109,132 @@ void draw_Leaves(sf::RenderWindow &window, const std::vector<Leaf>& leaves)
                 leafShape.setFillColor(sf::Color::Yellow);
             }
         }
-        else
-        {
-            // Цвет для мёртвых листьев - не меняется
-            if (leaf.chlorophyll > 70)
-            {
-                leafShape.setFillColor(sf::Color::Green);
-            }
-            else if (leaf.chlorophyll > 40)
-            {
-                leafShape.setFillColor(sf::Color::Yellow);
-            }
-            else if (leaf.anthocyanin > 15 && sun > 40)
-            {
-                leafShape.setFillColor(sf::Color::Red);
-            }
-            else
-            {
-                leafShape.setFillColor(sf::Color::Yellow);
-            }
-        }
+
 
         window.draw(leafShape);
     }
 }
 
-void update_leaf(std::vector<Leaf>& leaves)
+
+
+void update_leaf(std::vector<Leaf> &leaves, float deltaTime)
 {
-/*
-Уменьшает хлорофилл от солнца и холода
-Увеличивает антоцианы при наличии сахара, холода и солнца
-Каротиноиды всегда постоянны
-Результат: листья меняют цвет в зависимости от погоды
+    /*
+    Уменьшает хлорофилл от солнца и холода
+    Увеличивает антоцианы при наличии сахара, холода и солнца
+    Каротиноиды всегда постоянны
+    Результат: листья меняют цвет в зависимости от погоды
 
-Дождь увеличивает прилипчивость, ветер уменьшает
-Если stickiness < 20% — лист падает
-Результат: Листья отрываются и падают
-*/
+    Дождь увеличивает прилипчивость, ветер уменьшает
+    Если stickiness < 20% — лист падает
+    Результат: Листья отрываются и падают
+    */
 
-    for (auto& leaf : leaves) 
+    for (auto &leaf : leaves)
     {
-        if (leaf.is_alive)
+        switch (leaf.state)
         {
-            // нормализация (0-1)
-            float S = sun / 100.0f;          
-            float T = (temp + 10.0f) / 40.0f; 
-            if (T < 0) 
-            {
-                T = 0;
-            }
-            if (T > 1) 
-            {
-                T = 1;
-            }
-            float W = leaf.water / 100.0f;
-            float Sugar = leaf.sugar / 100.0f;
+        case LeafState::Bud:
 
-// Хлорофилл (зеленый)
-            
-            float optimal_sun = 1.0f - 2.0f * (S - 0.5f) * (S - 0.5f);      // пик при 50%
-            float optimal_temp = 1.0f - (T - 0.75f) * (T - 0.75f) * 3.0f;   // пик при 20°C
+            // если тепло, почка начинает расти
 
-            leaf.chlorophyll = 100.0f * optimal_sun * optimal_temp * W;
+            if (temp > 10.0f)
+                leaf.state = LeafState::Growing;
 
-// Антоцианы (красный)
+            break;
 
-            float cold_stress = exp(- (T * T) / 0.15f);
-            float antho = 2.0f * S * cold_stress * Sugar * W;
-            leaf.anthocyanin += antho;
+        case LeafState::Growing:
 
+            leaf.size += 2.0f * deltaTime; // лист увеличивается
 
-// Прилипчивость
-            if (wind < 80) 
-            {
-                // при слабом ветре прилипчивость почти не меняется
-                leaf.stickiness -= wind * 0.002f;
-            } else 
-            {
-                // при сильном ветре листья начинают срываться
-                leaf.stickiness -= wind * 0.05f;
-            }
-            
-            // дождь увеличивает прилипчивость
-            leaf.stickiness += rain * 0.03f;
-            
-// Отрыв 
-            if (leaf.stickiness < 20) 
-            {
-                leaf.is_alive = 0;
-            }
+            if (leaf.size >= 5.0f)
+                leaf.state = LeafState::Mature;
 
+            break;
 
-// ограничиваем значения
-            leaf.chlorophyll = std::max(0.0f, std::min(100.0f, leaf.chlorophyll));
-            leaf.anthocyanin = std::max(0.0f, std::min(100.0f, leaf.anthocyanin));
-            leaf.stickiness = std::max(0.0f, std::min(100.0f, leaf.stickiness));
-                
+        case LeafState::Mature:
+
+            mature(leaf);
+
+            break;
+
+        case LeafState::Falling:
+
+            leaf.y += 30.0f * deltaTime; // падает вниз
+
+            leaf.x += sin(leaf.y * 0.1f) * 20.0f * deltaTime; // покачивание
+
+            if (leaf.y >= 590.0f)
+                leaf.state = LeafState::Dead;
+
+            break;
+
+        case LeafState::Dead:
+
+            // ничего не делаем, просто лежит
+
+            break;
         }
     }
 }
 
-void update_falling_leaves(std::vector<Leaf>& leaves, float deltaTime)
+void mature(Leaf &leaf)
 {
-    for (auto& leaf : leaves) 
+// нормализация (0-1)
+    float S = sun / 100.0f;
+    float T = (temp + 10.0f) / 40.0f;
+    if (T < 0)
     {
-        if (!leaf.is_alive && leaf.y < 590)
-        {
-            // увеличиваем координату 'y' на 15*deltaTime пикселя за кадр
-            leaf.y += 15.0f * deltaTime;
-            // медленнное падение 15 -> 8
-            // быстрое падение 15 -> 50
-
-            // Покачивание (20 пикселей в секунду)
-            leaf.x += ((rand() % 5) - 2) * 20.0f * deltaTime;      // leaf.pos.x += sin(leaf.pos.y * 0.1f) * 20.0f * deltaTime; // Покачивание
-            // случайно двигается -2 0 +2
-
-            // Не выходим за границы
-            if (leaf.x < 0)
-            {
-                leaf.x = 0;
-            }
-            if (leaf.x > 800)
-            {
-                leaf.x = 800;
-            }
-        }
-
-        if (!leaf.is_alive && leaf.y >= 600)
-        {
-           // leaf.y = 590;
-        }
+        T = 0;
     }
+    if (T > 1)
+    {
+        T = 1;
+    }
+    float W = leaf.water / 100.0f;
+    float Sugar = leaf.sugar / 100.0f;
+
+// Хлорофилл (зеленый)
+
+    float optimal_sun = 1.0f - 2.0f * (S - 0.5f) * (S - 0.5f);    // пик при 50%
+    float optimal_temp = 1.0f - (T - 0.75f) * (T - 0.75f) * 3.0f; // пик при 20°C
+
+    leaf.chlorophyll = 100.0f * optimal_sun * optimal_temp * W;
+
+// Антоцианы (красный)
+
+    float cold_stress = exp(-(T * T) / 0.15f);
+    float antho = 2.0f * S * cold_stress * Sugar * W;
+    leaf.anthocyanin += antho;
+
+// Прилипчивость
+    if (wind < 80)
+    {
+        // при слабом ветре прилипчивость почти не меняется
+        leaf.stickiness -= wind * 0.002f;
+    }
+    else
+    {
+        // при сильном ветре листья начинают срываться
+        leaf.stickiness -= wind * 0.05f;
+    }
+
+    // дождь увеличивает прилипчивость
+    leaf.stickiness += rain * 0.03f;
+
+// Отрыв
+    if (leaf.stickiness < 20.0f)
+    {
+
+        leaf.state = LeafState::Falling;
+
+        // Фиксируем цвет, чтобы он не менялся в полете
+
+        // (нужна функция GetCurrentColor на основе хлорофилла)
+    }
+
+// ограничиваем значения
+    leaf.chlorophyll = std::max(0.0f, std::min(100.0f, leaf.chlorophyll));
+    leaf.anthocyanin = std::max(0.0f, std::min(100.0f, leaf.anthocyanin));
+    leaf.stickiness = std::max(0.0f, std::min(100.0f, leaf.stickiness));
 }
