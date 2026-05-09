@@ -11,8 +11,11 @@ void init_Branches(std::vector<Branch>& branches, size_t num_branch)
     branches.clear();               // очищаем, если там что-то было
     branches.reserve(num_branch);   // выделяем память
 
+    size_t leftCount = num_branch / 2;
+    size_t rightCount = num_branch - leftCount;
+
     // левые ветки
-    for (int i = 0; i < num_branch/2; i++) 
+    for (int i = 0; i < leftCount; i++) 
     {
         Branch branch;
 
@@ -27,7 +30,7 @@ void init_Branches(std::vector<Branch>& branches, size_t num_branch)
     }
 
     // правые ветки
-    for (int i = 0; i < num_branch/2; i++) 
+    for (int i = 0; i < rightCount; i++) 
     {
         Branch branch;
 

@@ -32,14 +32,18 @@ struct Leaf
     float anthocyanin;      // кол-во антоциан      0-100% (красный)
     float stickiness;       // прилипчивость        0-100%
 
+    sf::Color current_color;
+
+    float changeSpeed;      // индивидуальная скорость реакции листа, чтобы дерево желтело не синхронно
+
     int branchIndex;        // номер ветки, на которой висит лист
     float positionOnBranch; // 0-1, где именно на ветке
 };
 
 void init_Leaves(std::vector<Leaf>& leaves, std::vector<Branch>& branches, size_t num_leaf);
 void draw_Leaves(sf::RenderWindow& window, const std::vector<Leaf>& leaves);
-void update_leaf(std::vector<Leaf>& leaves, float deltaTime);
-void mature(Leaf& leaf);
-//void update_falling_leaves(std::vector<Leaf>& leaves, float deltaTime);
+void update_leaf(std::vector<Leaf>& leaves, float deltaTime, std::string& season);
+void mature(Leaf& leaf, float deltaTime);
+sf::Color lerpColor(const sf::Color& a, const sf::Color& b, float t);
 
 #endif

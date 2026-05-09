@@ -8,6 +8,8 @@
 
 int main()
 {
+
+    bool manual = false;
     
     srand(time(nullptr));
 
@@ -63,6 +65,8 @@ int main()
 
     float year_time = 0; // 0 - начало весны, 365 - конец зимы
 
+    bool isRunning = true;
+
     // Главный цикл. Программа крутится здесь, пока окно открыто
     while (window.isOpen())
     {
@@ -78,7 +82,7 @@ int main()
                 window.close();
             }
 
-            if (event.type == sf::Event::KeyPressed)
+            if (event.type == sf::Event::KeyPressed && manual == true)
             {
 
                 // солнце - клавиши 1 и 2
@@ -170,64 +174,26 @@ int main()
             deltaTime = 0.033f;
         }
 
-// авто-погода - начальная версия
-
-        year_time += deltaTime * 10.0f; // 1 секунда реальности = 10 дней в игре
+// авто-погода
 
         std::string season;
-        float t = 0;
 
-        if (year_time > 365)
+        if (isRunning)
         {
-            year_time = 0; // по новой
+            auto_weather(year_time, deltaTime, season);
+
+            // обновление листьев
+            update_leaf(leaves, deltaTime, season);
+
+            // Если прошел год (365 дней)
+            if (year_time >= 365.0f)
+            {
+                isRunning = false;
+                std::cout << "the end." << std::endl;
+            }
         }
 
-// весна (0-90 дней)
-        if (year_time < 90)
-        {
-            season = "Spring";
-            t = year_time / 90.0f;
-            temp = 0 + t * 15.0f;  // 0C -> 15C
-            sun = 20 + t * 30.0f;  // 20% -> 50%
-            rain = 30 + t * 40.0f; // 30% -> 70%
-            wind = 10 + t * 30.0f; // 10% -> 40%
-        }
-// лето (90-180 дней)
-        else if (year_time < 180)
-        {
-            season = "Summer";
-            t = (year_time - 90) / 90.0f;
-            temp = 15 + t * 10.0f; // 15C -> 25C
-            sun = 50 + t * 30.0f;  // 50% -> 80%
-            rain = 70 - t * 40.0f; // 70% -> 40%
-            wind = 40 - t * 15.0f;  // 40% -> 25%
-        }
-// осень (180-270 дней)
-        else if (year_time < 270)
-        { 
-            season = "Autumn";
-            t = (year_time - 180) / 90.0f;
-            temp = 25 - t * 20.0f; // 25C -> 5C
-            sun = 80 - t * 30.0f;  // 80% -> 50%
-            rain = 40 + t * 45.0f; // 40% -> 85%
-            wind = 25 + t * 40.0f; // 25% -> 65%
-        }
-// зима (270-365 дней)
-        else
-        {
-            season = "Winter";
-            t = (year_time - 270) / 95.0f;
-            temp = 5 - t * 15.0f; // 5C -> -10C
-            sun = 50 - t * 30.0f;  // 50% -> 20%
-            rain = 85 - t * 85.0f; // 85% -> 0%
-            wind = 65 - t * 30.0f; // 65% -> 35%
-        }
-
-
-        // обновление листьев
-        update_leaf(leaves, deltaTime);
-
-
+        
         // Заливаем всё окно тёмно-синим цветом.
         window.clear(sf::Color(20, 30, 50)); // RGB: 20,30,50
 

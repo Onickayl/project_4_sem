@@ -10,7 +10,6 @@ struct Branch
     float startX, startY;   // откуда растёт (координаты начала)
     float endX, endY;       // куда растёт (координаты конца)
     float width;            // толщина ветки (для отрисовки)
-    float angle;            // угол наклона
     int leafCount;          // сколько листьев на этой ветке
 };
 
