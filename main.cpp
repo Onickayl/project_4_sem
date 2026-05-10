@@ -11,17 +11,16 @@
 int main()
 {
 
+// ручной режим - да/нет
     bool manual = false;
+
+// для паузы 
+    bool paused = false;      // флаг паузы
+    float pauseDeltaTime = 0; // накапливаем время в паузе
     
     srand(time(nullptr));
 
-    size_t num_leaf = 160;
-    std::vector<Leaf> leaves;
-
-    size_t num_branch = 16;
-    std::vector<Branch> branches;
-
-    // Создаём окно 800x600 с названием "autumn". Переменная window — это окно.
+// Создаём окно 800x600 с названием "autumn". Переменная window — это окно.
     sf::RenderWindow window(sf::VideoMode(800, 600), "autumn");
 
     // ограничиваем количество кадров в секунду (FPS) до 60
@@ -31,6 +30,7 @@ int main()
     sf::Clock deltaClock;
     //без него скорость падения листьев зависит от FPS
 
+// про текст
     // создаём объект "шрифт"
     sf::Font font;
     // загружаем конкретный файл со шрифтом
@@ -60,14 +60,21 @@ int main()
     trunk.setFillColor(sf::Color(139, 69, 19));
 
 // инициализация веток
+    size_t num_branch = 16;
+    std::vector<Branch> branches;
     init_Branches(branches, num_branch);
 
 // инициализация листьев
+    size_t num_leaf = 400;
+    std::vector<Leaf> leaves;
     init_Leaves(leaves, branches, num_leaf);
 
+// игровые дни
     float year_time = 0; // 0 - начало весны, 365 - конец зимы
 
+// симуляция - только год длится
     bool isRunning = true;
+
 
 // для записи в CSV
     // Открываем CSV файл
@@ -97,6 +104,30 @@ int main()
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)
             {
                 window.close();
+            }
+
+            // пауза - если нажать клавишу P
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::P)
+            {
+                paused = !paused;
+            }
+
+            // рестарт симуляции - если нажать клавишу R
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::R)
+            {
+                year_time = 0.0f;
+                isRunning = true;
+                paused = false;
+                lastRecordedDay = -1.0f;
+
+                // пересоздаём листья
+                init_Leaves(leaves, branches, num_leaf);
+
+                // очищаем CSV и пишем заголовки заново
+                csvFile.close();
+                csvFile.open("data_of_simulation.csv");  
+                csvFile << "Day,Season,Temp,Sun,Rain,Wind,AvgChlorophyll\n";
+
             }
 
             if (event.type == sf::Event::KeyPressed && manual == true)
@@ -189,6 +220,13 @@ int main()
         if (deltaTime > 0.033f)
         {
             deltaTime = 0.033f;
+        }
+
+// если пауза — копим время, но не обновляем
+        if (paused)
+        {
+            pauseDeltaTime += deltaTime;
+            deltaTime = 0.0f;               // зануляем, чтобы mature не копил изменения
         }
 
 // авто-погода
