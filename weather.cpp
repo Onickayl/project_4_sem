@@ -9,7 +9,7 @@ float wind = 0.0f;
 
 void auto_weather(float& year_time, float deltaTime, std::string& season)
 {
-    year_time += deltaTime * 10.0f;
+    year_time += deltaTime * 10.0f; // 10
 
 
     // фаза года 0 - 1

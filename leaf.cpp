@@ -38,15 +38,23 @@ void init_Leaves(std::vector<Leaf>& leaves, std::vector<Branch>& branches, size_
         leaf.chlorophyll = 100;
         leaf.carotenoids = 50;
         leaf.anthocyanin = 0;
-        leaf.water = 100;
-        leaf.sugar = 50;
+        leaf.water = 70 + (rand() % 30);        // 70-100
+        leaf.sugar = 30 + (rand() % 40);        // 30-70
         leaf.stickiness = 60 + (rand() % 40);
         leaf.state = LeafState::Bud;
 
         leaf.current_color = sf::Color::Green;  // начальный цвет
         leaf.current_color.a = 255;             // полностью непрозрачный
 
-        leaf.changeSpeed = 1.5f + (rand() % 200) / 100.0f;  // 1.5-3.5
+        leaf.changeSpeed = 0.5f + (rand() % 500) / 100.0f;  // 0.5-5.5
+
+        float normalizedY = (leaf.y - 100.0f) / 400.0f;
+        normalizedY = std::max(0.0f, std::min(1.0f, normalizedY));
+        leaf.lightModifier = exp(-normalizedY * 2.0f);
+
+        leaf.wakeupTemp = 3.0f + (rand() % 5);  // 3-8°C
+
+        leaf.growSpeed = 1.5f + (rand() % 200) / 100.0f;  // 1.5-3.5
 
         // Запоминаем, на какой ветке висит
         leaf.branchIndex = branchNum;
@@ -68,6 +76,12 @@ void draw_Leaves(sf::RenderWindow &window, const std::vector<Leaf>& leaves)
 
     for (const auto& leaf : leaves) 
     {
+        if (leaf.state == LeafState::Bud && leaf.size < 0.5f) 
+        {
+            // пропускаем маленького размера почки, чтобы сначала дерево было полностью голым
+            continue; 
+        }
+
         // устанавливаем нужный размер
         leafShape.setRadius(leaf.size);
         
@@ -144,16 +158,16 @@ void update_leaf(std::vector<Leaf> &leaves, float deltaTime, std::string& season
 
             // если тепло, почка начинает расти
 
-            if (temp > 5.0f) 
+            if (temp > leaf.wakeupTemp) 
                 leaf.state = LeafState::Growing;
 
             break;
 
         case LeafState::Growing:
 
-            leaf.size += 2.0f * deltaTime; // лист увеличивается
+            leaf.size += leaf.growSpeed * deltaTime; // лист увеличивается
 
-            if (leaf.size >= 5.0f)
+            if (leaf.size >= 7.0f)
                 leaf.state = LeafState::Mature;
 
             break;
@@ -166,7 +180,7 @@ void update_leaf(std::vector<Leaf> &leaves, float deltaTime, std::string& season
 
         case LeafState::Falling:
 
-            leaf.y += 60.0f * deltaTime; // падает вниз
+            leaf.y += 100.0f * deltaTime; // падает вниз
 
             leaf.x += sin(leaf.y * 0.1f) * 20.0f * deltaTime; // покачивание
 
@@ -197,7 +211,7 @@ void mature(Leaf &leaf, float deltaTime)
 {
 
 // нормализация (0-1)
-    float S = sun / 100.0f;
+    float S = (sun / 100.0f) * leaf.lightModifier;
     float T = (temp + 10.0f) / 40.0f;
     if (T < 0)
     {
@@ -213,12 +227,19 @@ void mature(Leaf &leaf, float deltaTime)
 
 // Хлорофилл (зеленый)
 
+/*
+2. Улучшение инициализации (Файл: leaf.cpp)
+
+В функции init_Leaves нужно реализовать логику из README: «положение дерева относительно реки или градиент освещенности по кроне».
+Градиент: Рассчитывайте leaf.lightModifier на основе координаты y. Чем меньше y (выше на экране), тем больше солнца получает лист.
+
+
+*/
+
     float optimal_sun = 1.0f - 2.0f * (S - 0.5f) * (S - 0.5f);    // пик при 50%
     float optimal_temp = 1.0f - (T - 0.75f) * (T - 0.75f) * 3.0f; // пик при 20°C
 
-
-
-    float targetChlorophyll = 100.0f * std::max(0.0f, optimal_sun * optimal_temp * W);
+    float targetChlorophyll = 100.0f * std::max(0.0f, optimal_sun * optimal_temp * W);    
     leaf.chlorophyll += (targetChlorophyll - leaf.chlorophyll) * deltaTime * leaf.changeSpeed;
 
 // Антоцианы (красный)
