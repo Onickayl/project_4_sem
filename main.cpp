@@ -52,6 +52,31 @@ int main()
     // где будет текст на экране
     weatherText.setPosition(10, 10);
 
+// прямоугольники прогресса сезона
+
+    const int numBars = 4; // 4 деления на сезон
+    sf::RectangleShape barFills[numBars];   // заполнение
+    sf::RectangleShape barFrames[numBars];  // рамки
+
+    float barStartX = 10;
+    float barStartY = 40; // под текстом
+    float barWidth = 10;
+    float barHeight = 15;
+    float barSpacing = 5;   // расстояние между прямоугольниками
+
+    for (int i = 0; i < numBars; i++)
+    {
+        // рамка
+        barFrames[i].setSize(sf::Vector2f(barWidth, barHeight));
+        barFrames[i].setPosition(barStartX + i * (barWidth + barSpacing), barStartY);
+        barFrames[i].setFillColor(sf::Color::Transparent);
+        barFrames[i].setOutlineColor(sf::Color(150, 150, 150));     // цвет контура - серый
+        barFrames[i].setOutlineThickness(1);                        // толщина контура в пикселях
+
+        // заполнение
+        barFills[i].setSize(sf::Vector2f(0, barHeight));            // ширина 0 - пустой
+        barFills[i].setPosition(barStartX + i * (barWidth + barSpacing), barStartY);
+    }
 
 
 // ствол дерева
@@ -281,6 +306,59 @@ int main()
             }
         }
 
+// прямоугольники прогресса сезона
+        
+        sf::Color seasonColor;
+
+        if (season == "Spring")
+        {
+            seasonColor = sf::Color::Green; 
+        }
+        else if (season == "Summer")
+        {
+            seasonColor = sf::Color::Yellow; 
+        }
+        else if (season == "Autumn")
+        {
+            seasonColor = sf::Color::Red;
+        }
+        else
+        {
+            seasonColor = sf::Color::Cyan; 
+        }
+
+        // прогресс внутри сезона 
+        float phase = year_time / 365.0f;
+        float seasonProgress = (phase * 4.0f) - floor(phase * 4.0f); 
+        // floor() отбрасывает дробную часть - только целая часть
+
+        // заполняем прямоугольники
+        int filledBars = (int)(seasonProgress * numBars);           // сколько целых делений заполнено
+        float partialBar = seasonProgress * numBars - filledBars;   // дробная часть
+
+        for (int i = 0; i < numBars; i++)
+        {
+            if (i < filledBars)
+            {
+                // полностью заполнен
+                barFills[i].setSize(sf::Vector2f(barWidth, barHeight));
+                barFills[i].setFillColor(seasonColor);
+            }
+            else if (i == filledBars)
+            {
+                // частично заполнен
+                barFills[i].setSize(sf::Vector2f(barWidth * partialBar, barHeight));
+                barFills[i].setFillColor(seasonColor);
+            }
+            else
+            {
+                // пусто
+                barFills[i].setSize(sf::Vector2f(0, barHeight));
+            }
+        }
+
+
+
         // Заливаем всё окно тёмно-синим цветом.
         window.clear(sf::Color(20, 30, 50)); // RGB: 20,30,50
 
@@ -301,6 +379,14 @@ int main()
         
         // рисуем текст
         window.draw(weatherText);
+
+        // Рисуем прямоугольники
+        for (int i = 0; i < numBars; i++)
+        {
+            window.draw(barFrames[i]);      // рамки
+            window.draw(barFills[i]);       // заполнение
+        }
+
 
         // Показываем всё, что нарисовали, на экране
         window.display();
