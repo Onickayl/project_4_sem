@@ -5,6 +5,8 @@
 #include "weather.hpp"
 #include <iostream>
 #include <filesystem>
+#include <iomanip>   
+#include <fstream>   
 
 int main()
 {
@@ -66,6 +68,21 @@ int main()
     float year_time = 0; // 0 - начало весны, 365 - конец зимы
 
     bool isRunning = true;
+
+// для записи в CSV
+    // Открываем CSV файл
+    std::ofstream csvFile("data_of_simulation.csv");
+
+    if (!csvFile.is_open())
+    {
+        std::cerr << "Cannot open CSV file" << std::endl;
+        return 1;
+    }
+
+    // Записываем заголовки
+    csvFile << "Day,Season,Temp,Sun,Rain,Wind,AvgChlorophyll\n";
+    float lastRecordedDay = -1.0f;
+
 
 // Главный цикл. Программа крутится здесь, пока окно открыто
     while (window.isOpen())
@@ -185,6 +202,39 @@ int main()
             // обновление листьев
             update_leaf(leaves, deltaTime, season);
 
+            // Записываем CSV каждый игровой день
+            int currentDay = (int)year_time;
+
+            if (currentDay > lastRecordedDay && currentDay <= 365)
+            {
+                lastRecordedDay = currentDay;
+
+                // Считаем листья по состояниям
+                float totalChloro = 0.0f;
+                int matureCount = 0;
+
+                for (const auto &leaf : leaves)
+                {
+                    if (leaf.state == LeafState::Mature)
+                    {
+                        totalChloro += leaf.chlorophyll; 
+                        matureCount++; 
+                    }
+                }
+
+                float avgChloro = matureCount > 0 ? totalChloro / matureCount : 0.0f;
+
+
+                // Записываем строку
+                csvFile << currentDay << ","
+                        << season << ","
+                        << std::fixed << std::setprecision(1) << temp << ","
+                        << std::fixed << std::setprecision(0) << sun << ","
+                        << std::fixed << std::setprecision(0) << rain << ","
+                        << std::fixed << std::setprecision(0) << wind << ","
+                        << std::fixed << std::setprecision(1) << avgChloro << "\n";
+            }
+
             // Если прошел год (365 дней)
             if (year_time >= 365.0f)
             {
@@ -193,7 +243,6 @@ int main()
             }
         }
 
-        
         // Заливаем всё окно тёмно-синим цветом.
         window.clear(sf::Color(20, 30, 50)); // RGB: 20,30,50
 
@@ -218,6 +267,9 @@ int main()
         // Показываем всё, что нарисовали, на экране
         window.display();
     }
+
+    csvFile.close();
+    std::cout << "Data saved to data_of_simulation.csv" << std::endl;
 
     return 0;
 }
