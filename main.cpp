@@ -114,6 +114,10 @@ int main(int argc, char* argv[])
     trunk.setPosition(400, 100);                     // Начинаем с Y=100, чтобы 500 пикселей вниз закончились на Y=600
     trunk.setFillColor(sf::Color(139, 69, 19));
 
+// земля
+    sf::RectangleShape ground(sf::Vector2f(800.0f, 50.0f));
+    ground.setPosition(0, 550); 
+
 // инициализация веток
     size_t num_branch = 16;
     std::vector<Branch> branches;
@@ -193,9 +197,9 @@ int main(int argc, char* argv[])
                // очищаем CSV и пишем заголовки заново
                 csvFile.close();
                 csvFile.open(csvFilename);  
-                csvFile << "Day,Season,Temp,Sun,Rain,Wind,AvgChlorophyll\n";
+                csvFile << "Day,Season,Temp,Sun,Rain,Wind,SoilWater,AvgChlorophyll\n";
 
-            }
+            }         
 
             if (event.type == sf::Event::KeyPressed && manual == true)
             {
@@ -274,8 +278,7 @@ int main(int argc, char* argv[])
             }
         }
 
-        
-
+                
         // получаем время с прошлого кадра
         float deltaTime = deltaClock.restart().asSeconds();
         /*
@@ -289,7 +292,8 @@ int main(int argc, char* argv[])
             deltaTime = 0.033f;
         }
 
-// если пауза — копим время, но не обновляем
+
+        // если пауза — копим время, но не обновляем
         if (paused)
         {
             pauseDeltaTime += deltaTime;
@@ -368,18 +372,22 @@ int main(int argc, char* argv[])
         if (season == "Spring")
         {
             seasonColor = sf::Color::Green; 
+            ground.setFillColor(sf::Color(101, 67, 33)); 
         }
         else if (season == "Summer")
         {
             seasonColor = sf::Color::Yellow; 
+            ground.setFillColor(sf::Color(34, 139, 34)); 
         }
         else if (season == "Autumn")
         {
             seasonColor = sf::Color::Red;
+            ground.setFillColor(sf::Color(101, 67, 33)); 
         }
         else
         {
             seasonColor = sf::Color::Cyan; 
+            ground.setFillColor(sf::Color(240, 248, 255)); 
         }
 
         // прогресс внутри сезона 
@@ -419,6 +427,7 @@ int main(int argc, char* argv[])
 
         // рисуем
         window.draw(trunk);
+        window.draw(ground);
         draw_Branch(window, branches);
         draw_Leaves(window, leaves);
 
@@ -468,9 +477,9 @@ std::string getFilename(ExperimentType exp)
 {
     switch (exp)
     {
-        case ExperimentType::Normal:        return "data_normal.csv";
-        case ExperimentType::Drought:       return "data_drought.csv";
-        case ExperimentType::GlobalWarming: return "data_warming.csv";
-        default:                            return "data_unknown.csv";
+        case ExperimentType::Normal:        return "weather_normal.txt";
+        case ExperimentType::Drought:       return "weather_drought.txt";
+        case ExperimentType::GlobalWarming: return "weather_warming.txt";
+        default:                            return "weather_unknown.txt";
     }
 }

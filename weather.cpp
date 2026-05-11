@@ -88,7 +88,7 @@ void auto_weather(float& year_time, float deltaTime, std::string& season, Experi
 }
 
 
-void init_Raindrops(std::vector<Precipitation> raindrops, size_t num_drops)
+void init_Raindrops(std::vector<Precipitation> &raindrops, size_t num_drops)
 {
 
 

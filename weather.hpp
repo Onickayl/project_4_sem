@@ -32,7 +32,7 @@ struct Precipitation
 
 void auto_weather(float& year_time, float deltaTime, std::string& season, ExperimentType& currentExp);
 
-void init_Raindrops(std::vector<Precipitation> raindrops, size_t num_drops);
+void init_Raindrops(std::vector<Precipitation> &raindrops, size_t num_drops);
 void updateRain(std::vector<Precipitation>& raindrops, float rainIntensity, float deltaTime);
 void drawRain(sf::RenderWindow& window, const std::vector<Precipitation>& raindrops, size_t num_drops);
 
