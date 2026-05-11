@@ -137,7 +137,7 @@ void draw_Leaves(sf::RenderWindow &window, const std::vector<Leaf>& leaves)
 
 
 
-void update_leaf(std::vector<Leaf> &leaves, float deltaTime, std::string& season)
+void update_leaf(std::vector<Leaf> &leaves, std::vector<Branch>& branches, float deltaTime, std::string& season)
 {
     /*
     Уменьшает хлорофилл от солнца и холода
@@ -174,7 +174,7 @@ void update_leaf(std::vector<Leaf> &leaves, float deltaTime, std::string& season
 
         case LeafState::Mature:
 
-            mature(leaf, deltaTime);
+            mature(leaf, branches, deltaTime);
 
             break;
 
@@ -207,36 +207,49 @@ void update_leaf(std::vector<Leaf> &leaves, float deltaTime, std::string& season
 }
 
 
-void mature(Leaf &leaf, float deltaTime)
+void mature(Leaf &leaf, std::vector<Branch>& branches, float deltaTime)
 {
 
 // нормализация (0-1)
     float S = (sun / 100.0f) * leaf.lightModifier;
     float T = (temp + 10.0f) / 40.0f;
-    if (T < 0)
-    {
-        T = 0;
-    }
-    if (T > 1)
-    {
-        T = 1;
-    }
+    if (T < 0) T = 0;
+    if (T > 1) T = 1;
+
+    float evaporation = 0.5f;
+    leaf.water -= (S * leaf.lightModifier + T) * evaporation * deltaTime;
+    
     float W = leaf.water / 100.0f;
     float Sugar = leaf.sugar / 100.0f;
 
-
-// Хлорофилл (зеленый)
-
 /*
-2. Улучшение инициализации (Файл: leaf.cpp)
 
-В функции init_Leaves нужно реализовать логику из README: «положение дерева относительно реки или градиент освещенности по кроне».
-Градиент: Рассчитывайте leaf.lightModifier на основе координаты y. Чем меньше y (выше на экране), тем больше солнца получает лист.
 
+5.1 Лист потребляет воду из ветки
+waterNeeded = leaf.maxWater - leaf.water (сколько нужно для восполнения)
+
+waterReceived = branch.water * коэффициент_передачи * deltaTime / branch.leafCount
+
+Вычесть waterReceived из branch.water
+
+Прибавить к leaf.water
 
 */
 
-    float optimal_sun = 1.0f - 2.0f * (S - 0.5f) * (S - 0.5f);    // пик при 50%
+// Хлорофилл (зеленый)
+
+
+    float optimal_sun;
+    if (S > 0.4f)
+    {
+        optimal_sun = 0.9f;
+    }        
+    else
+    {
+        float t = S / 0.4f;                     
+        optimal_sun = t * t * (3.0f - 2.0f * t); 
+    }
+
     float optimal_temp = 1.0f - (T - 0.75f) * (T - 0.75f) * 3.0f; // пик при 20°C
 
     float targetChlorophyll = 100.0f * std::max(0.0f, optimal_sun * optimal_temp * W);    
@@ -259,6 +272,32 @@ void mature(Leaf &leaf, float deltaTime)
     leaf.anthocyanin += (targetAntho - leaf.anthocyanin) * deltaTime * 1.5f; 
 
 // Прилипчивость
+
+/*
+В mature():
+
+Вода увеличивает прилипчивость:
+
+leaf.stickiness += leaf.water * коэффициент_влажности
+
+Влажный лист гибкий и крепкий
+
+Но сильный дождь сбивает листья:
+
+if (rain > 70) leaf.stickiness -= (rain - 70) * коэффициент_сбивания
+
+Ливень механически отрывает листья
+
+Ветер сушит лист:
+
+leaf.water -= wind * коэффициент_сушки * deltaTime
+
+Сухой лист становится хрупким
+
+leaf.stickiness -= wind * коэффициент_ветра * (1.0 - leaf.water / 100.0f)
+
+Сухой лист на ветру отрывается быстрее
+*/
 
     // Ветер влияет всегда, но нелинейно
     if (wind > 10)
@@ -315,6 +354,55 @@ void mature(Leaf &leaf, float deltaTime)
     leaf.chlorophyll = std::max(0.0f, std::min(100.0f, leaf.chlorophyll));
     leaf.anthocyanin = std::max(0.0f, std::min(100.0f, leaf.anthocyanin));
     leaf.stickiness = std::max(0.0f, std::min(100.0f, leaf.stickiness));
+}
+
+void distributeWater(std::vector<Leaf>& leaves, std::vector<Branch>& branches, float& soilWater, float deltaTime)
+{
+
+    float totalWaterIntake = soilWater * deltaTime * 0.5f;
+    totalWaterIntake = std::min(totalWaterIntake, soilWater);
+    float totalPriority = 0.0f;
+
+// приоритет
+    for (auto &branch : branches)
+    {
+        float normalizedHeight = (branch.startY - 100.0f) / 400.0f;
+        normalizedHeight = std::max(0.0f, std::min(1.0f, normalizedHeight));
+
+        float priority = branch.leafCount * normalizedHeight * (1.0f - branch.water / 100.0f);
+        totalPriority += priority;
+    }
+
+// вода веткам
+    for (auto &branch : branches)
+    {
+        float normalizedHeight = (branch.startY - 100.0f) / 400.0f;
+        normalizedHeight = std::max(0.0f, std::min(1.0f, normalizedHeight));
+
+        float priority = branch.leafCount * normalizedHeight * (1.0f - branch.water / 100.0f);
+        branch.water += totalWaterIntake * priority / totalPriority;
+
+        if (branch.water > 100.0f)
+            branch.water = 100.0f;
+    }
+
+    soilWater -= totalWaterIntake;
+
+// вода листьям 
+    for (auto& leaf : leaves)
+    {
+        //if (leaf.state != LeafState::Mature) continue;  
+        
+        float waterNeeded = 100.0f - leaf.water;
+        float waterFromBranch = branches[leaf.branchIndex].water * 0.1f * deltaTime;
+
+        waterFromBranch = std::min(waterFromBranch, waterNeeded);
+        waterFromBranch = std::min(waterFromBranch, branches[leaf.branchIndex].water);
+        
+        leaf.water += waterFromBranch;
+        branches[leaf.branchIndex].water -= waterFromBranch;
+    }
+
 }
 
 // LERP для цветов

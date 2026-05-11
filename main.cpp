@@ -94,6 +94,11 @@ int main()
     std::vector<Leaf> leaves;
     init_Leaves(leaves, branches, num_leaf);
 
+// инициализация капель
+    size_t num_drops = 200;
+    std::vector<Raindrop> raindrops;
+    init_Raindrops(raindrops, num_drops);
+
 // игровые дни
     float year_time = 0; // 0 - начало весны, 365 - конец зимы
 
@@ -262,8 +267,20 @@ int main()
         {
             auto_weather(year_time, deltaTime, season);
 
+            distributeWater(leaves, branches, soilWater, deltaTime);
+
+            if (season == "Winter")
+            {
+                //updateSnow(raindrops, rain, deltaTime);
+            }
+            else
+            {
+                updateRain(raindrops, rain, deltaTime);
+            }
             // обновление листьев
-            update_leaf(leaves, deltaTime, season);
+            update_leaf(leaves, branches, deltaTime, season);
+
+            //updateRain(raindrops, rain, deltaTime);
 
             // Записываем CSV каждый игровой день
             int currentDay = (int)year_time;
@@ -366,6 +383,16 @@ int main()
         window.draw(trunk);
         draw_Branch(window, branches);
         draw_Leaves(window, leaves);
+
+        if (season == "Winter")
+        {
+            //drawSnow(window, raindrops, num_drops);
+        }
+        else
+        {
+            drawRain(window, raindrops, num_drops);
+        }
+        
 
         // собираем строку
         std::string text = season + " | " + 

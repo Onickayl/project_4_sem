@@ -11,6 +11,7 @@ struct Branch
     float endX, endY;       // куда растёт (координаты конца)
     float width;            // толщина ветки (для отрисовки)
     int leafCount;          // сколько листьев на этой ветке
+    float water;            // сколько воды в ветке (0-100%)
 };
 
 void init_Branches(std::vector<Branch>& branches, size_t num_branch);

@@ -45,8 +45,9 @@ struct Leaf
 
 void init_Leaves(std::vector<Leaf>& leaves, std::vector<Branch>& branches, size_t num_leaf);
 void draw_Leaves(sf::RenderWindow& window, const std::vector<Leaf>& leaves);
-void update_leaf(std::vector<Leaf>& leaves, float deltaTime, std::string& season);
-void mature(Leaf& leaf, float deltaTime);
+void update_leaf(std::vector<Leaf>& leaves, std::vector<Branch>& branches, float deltaTime, std::string& season);
+void mature(Leaf &leaf, std::vector<Branch>& branches, float deltaTime);
+void distributeWater(std::vector<Leaf>& leaves, std::vector<Branch>& branches, float& soilWater, float deltaTime);
 sf::Color lerpColor(const sf::Color& a, const sf::Color& b, float t);
 
 #endif
