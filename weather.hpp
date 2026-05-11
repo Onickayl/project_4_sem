@@ -15,19 +15,23 @@ extern float rain;
 extern float wind;
 extern float soilWater;
 
-struct Raindrop
+struct Precipitation
 {
     float x, y;       // позиция
     float speed;      // скорость падения
-    float length;     // длина капли (чёрточка, а не точка)
+    float length;     // размер
 
 };
 
 void auto_weather(float& year_time, float deltaTime, std::string& season);
 
-void init_Raindrops(std::vector<Raindrop> raindrops, size_t num_drops);
-void updateRain(std::vector<Raindrop>& drops, float rainIntensity, float deltaTime);
-void drawRain(sf::RenderWindow& window, const std::vector<Raindrop>& drops, size_t num_drops);
+void init_Raindrops(std::vector<Precipitation> raindrops, size_t num_drops);
+void updateRain(std::vector<Precipitation>& raindrops, float rainIntensity, float deltaTime);
+void drawRain(sf::RenderWindow& window, const std::vector<Precipitation>& raindrops, size_t num_drops);
+
+void init_Snowdrops(std::vector<Precipitation> &snowflakes, size_t num_flakes);
+void updateSnow(std::vector<Precipitation>& snowflakes, std::vector<Precipitation> &groundSnow, float snowIntensity, float deltaTime);
+void drawSnow(sf::RenderWindow &window, const std::vector<Precipitation> &snowflakes, std::vector<Precipitation> &groundSnow, size_t num_flakes);
 
 
 

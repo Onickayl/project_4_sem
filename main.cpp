@@ -96,8 +96,14 @@ int main()
 
 // инициализация капель
     size_t num_drops = 200;
-    std::vector<Raindrop> raindrops;
+    std::vector<Precipitation> raindrops;
     init_Raindrops(raindrops, num_drops);
+
+// инициализация снежинок
+    size_t num_flakes = 200;
+    std::vector<Precipitation> snowflakes;
+    std::vector<Precipitation> groundSnow;
+    init_Raindrops(snowflakes, num_flakes);
 
 // игровые дни
     float year_time = 0; // 0 - начало весны, 365 - конец зимы
@@ -271,7 +277,7 @@ int main()
 
             if (season == "Winter")
             {
-                //updateSnow(raindrops, rain, deltaTime);
+                updateSnow(snowflakes, groundSnow, rain, deltaTime);
             }
             else
             {
@@ -386,7 +392,7 @@ int main()
 
         if (season == "Winter")
         {
-            //drawSnow(window, raindrops, num_drops);
+            drawSnow(window, snowflakes, groundSnow, num_flakes);
         }
         else
         {

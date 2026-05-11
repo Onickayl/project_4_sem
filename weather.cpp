@@ -72,13 +72,13 @@ void auto_weather(float& year_time, float deltaTime, std::string& season)
 }
 
 
-void init_Raindrops(std::vector<Raindrop> raindrops, size_t num_drops)
+void init_Raindrops(std::vector<Precipitation> raindrops, size_t num_drops)
 {
 
 
     for (int i = 0; i < num_drops; i++)
     {
-        Raindrop drop;
+        Precipitation drop;
 
         drop.x = rand() % 800;              // случайный X по ширине окна
         drop.y = rand() % 600;                       
@@ -89,13 +89,13 @@ void init_Raindrops(std::vector<Raindrop> raindrops, size_t num_drops)
     }
 }
 
-void updateRain(std::vector<Raindrop>& drops, float rainIntensity, float deltaTime)
+void updateRain(std::vector<Precipitation>& raindrops, float rainIntensity, float deltaTime)
 {
 
     float speed = 300 + rain * 2;
     float length = 5 + rain / 100.0f * 15.0f;
 
-    for (auto& drop : drops)
+    for (auto& drop : raindrops)
     {
         drop.speed = speed;
 
@@ -105,7 +105,7 @@ void updateRain(std::vector<Raindrop>& drops, float rainIntensity, float deltaTi
         // Упали за экран — вернуть наверх
         if (drop.y > 590)
         {
-            drop.y = -10;//rand() % 600; 
+            drop.y = -10; 
             drop.x = rand() % 800;
         }
     }
@@ -114,40 +114,38 @@ void updateRain(std::vector<Raindrop>& drops, float rainIntensity, float deltaTi
     int targetDrops = (int)(rainIntensity * 2.0f);  // 0-200 капель
 
 // Если дождь слабый — убираем лишние капли
-    while (drops.size() > targetDrops && !drops.empty())
+    while (raindrops.size() > targetDrops && !raindrops.empty())
     {
-        drops.pop_back();
+        raindrops.pop_back();
     }
 
 // Если дождь сильный — добавляем
-    while (drops.size() < targetDrops)
+    while (raindrops.size() < targetDrops)
     {
-        Raindrop drop;
+        Precipitation drop;
 
         drop.x = rand() % 800;
         drop.y = rand() % 600; 
         drop.speed = speed;
         drop.length = length;
 
-        drops.push_back(drop);
+        raindrops.push_back(drop);
     }
 }
 
 
-void drawRain(sf::RenderWindow& window, const std::vector<Raindrop>& drops, size_t num_drops)
+void drawRain(sf::RenderWindow& window, const std::vector<Precipitation>& raindrops, size_t num_drops)
 {
     float N = num_drops * rain / 100.0f;
     float speed = 300 + rain * 2;
     float length = 5 + rain / 100.0f * 15.0f;
-    //speed = базовая_скорость + rain * множитель
-    //length = минимальная_длина + rain * множитель
 
     for (int i = 0; i < N; i++)
     {
         // Капля — это узкий прямоугольник (чёрточка)
         sf::RectangleShape raindrop(sf::Vector2f(1.5f, length));
 
-        raindrop.setPosition(drops[i].x, drops[i].y);
+        raindrop.setPosition(raindrops[i].x, raindrops[i].y);
         
         raindrop.setFillColor(sf::Color(150, 180, 220, 180));  // голубой, полупрозрачный
         
@@ -155,5 +153,102 @@ void drawRain(sf::RenderWindow& window, const std::vector<Raindrop>& drops, size
         raindrop.setRotation(15.0f);
         
         window.draw(raindrop);
+    }
+}
+
+void init_Snowdrops(std::vector<Precipitation> &snowflakes, size_t num_flakes)
+{
+
+    for (int i = 0; i < num_flakes; i++)
+    {
+        Precipitation drop;
+
+        drop.x = rand() % 800;         
+        drop.y = rand() % 600;                       
+        drop.speed = 30 + rand() % 50;    // 30-80 пикселей в секунду
+        drop.length = 1 + rand() % 2;     // длина 1-3 пикселей
+
+        snowflakes.push_back(drop);
+    }
+}
+
+
+void updateSnow(std::vector<Precipitation>& snowflakes, std::vector<Precipitation> &groundSnow, float snowIntensity, float deltaTime)
+{
+
+    float speed = 30 + rain / 2.0f;
+    float length = 1 + rain / 100.0f * 6.0f;
+
+    for (auto &drop : snowflakes)
+    {
+        drop.speed = speed;
+
+        // падают
+        drop.y += drop.speed * deltaTime;
+        drop.x += sin(drop.y * 0.1f) * 50.0f * deltaTime; // покачивание 
+
+        // Упали за экран — вернуть наверх + покров
+        if (drop.y > 590)
+        {
+            Precipitation flake;
+            flake.x = drop.x;
+            flake.y = 590 + rand() % 5; 
+            flake.length = length;
+            groundSnow.push_back(flake);
+
+            // ограничим количество 
+            if (groundSnow.size() > 5000) groundSnow.erase(groundSnow.begin());
+
+            drop.y = -10;
+            drop.x = rand() % 800;
+        }
+    }
+
+    int targetDrops = (int)(snowIntensity * 2.0f);  // 0-200 снежинок
+
+// Если снег слабый — убираем лишние капли
+    while (snowflakes.size() > targetDrops && !snowflakes.empty())
+    {
+        snowflakes.pop_back();
+    }
+
+// Если снег сильный — добавляем
+    while (snowflakes.size() < targetDrops)
+    {
+        Precipitation drop;
+
+        drop.x = rand() % 800;
+        drop.y = rand() % 600; 
+        drop.speed = speed;
+        drop.length = length;
+
+        snowflakes.push_back(drop);
+    }
+}
+
+void drawSnow(sf::RenderWindow &window, const std::vector<Precipitation> &snowflakes, std::vector<Precipitation> &groundSnow, size_t num_flakes)
+{
+    float N = num_flakes * rain / 100.0f;
+    float speed = 30 + rain / 2.0f;
+    float length = 1 + rain / 100.0f * 6.0f;
+
+    for (int i = 0; i < N; i++)
+    {
+        
+        sf::CircleShape flakes(length);
+
+        flakes.setPosition(snowflakes[i].x, snowflakes[i].y);
+
+        flakes.setFillColor(sf::Color(255, 255, 255, 200)); // белый, полупрозрачный
+
+        window.draw(flakes);
+    }
+
+    for (auto &flake : groundSnow)
+    {
+        sf::CircleShape shape(flake.length);
+        shape.setPosition(flake.x, flake.y);
+        shape.setFillColor(sf::Color(255, 255, 255, 200));
+        window.draw(shape);
     }
 }
