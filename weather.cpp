@@ -8,7 +8,8 @@ float wind = 0.0f;
 float soilWater = 50.0f;
 
 
-void auto_weather(float& year_time, float deltaTime, std::string& season)
+
+void auto_weather(float& year_time, float deltaTime, std::string& season, ExperimentType& currentExp)
 {
     year_time += deltaTime * 10.0f; // 10
 
@@ -21,10 +22,24 @@ void auto_weather(float& year_time, float deltaTime, std::string& season)
     float evaporation = 1.0f;
     float waterSpeed = 1.0f;
 
+    float rainCoef = 1.0f;
+    float tempCoef = 0.0f;
+
+    if (currentExp == ExperimentType::Drought)
+    {
+        rainCoef = 0.2f;
+    }
+
+    if (currentExp == ExperimentType::GlobalWarming)
+    {
+        tempCoef = 7.0f;
+    }
+
 
 // температура
     float radTemp = (phase - 0.375f) * 2.0f * M_PI;  
     temp = 5.0f + 15.0f * cos(radTemp);            // от -10С до 20С
+    temp += tempCoef;
 
 // солнце
     float radSun = (phase - 0.375) * 2.0f * M_PI;  
@@ -35,6 +50,7 @@ void auto_weather(float& year_time, float deltaTime, std::string& season)
 // дождь 
     float radRain = phase * 4.0f * M_PI;
     rain = 50.0f + 25.0f * cos(radRain);           // от 25 до 75
+    rain = rain * rainCoef;
     if (rain < 0.0f) rain = 0.0f;
     if (rain > 100.0f) rain = 100.0f;
 
@@ -47,7 +63,7 @@ void auto_weather(float& year_time, float deltaTime, std::string& season)
 // вода в почве
     soilWater += rain * moisture;
     soilWater -= (sun + temp) * evaporation;
-    soilWater -= waterSpeed * deltaTime;   // уходит в дерево - может не через скорость, а тоже как коэффициент не знаю
+    soilWater -= waterSpeed * deltaTime;   // уходит в дерево
     if (soilWater < 0.0f) soilWater = 0.0f;
     if (soilWater > 100.0f) soilWater = 100.0f;
 
@@ -133,7 +149,6 @@ void updateRain(std::vector<Precipitation>& raindrops, float rainIntensity, floa
     }
 }
 
-
 void drawRain(sf::RenderWindow& window, const std::vector<Precipitation>& raindrops, size_t num_drops)
 {
     float N = num_drops * rain / 100.0f;
@@ -171,7 +186,6 @@ void init_Snowdrops(std::vector<Precipitation> &snowflakes, size_t num_flakes)
         snowflakes.push_back(drop);
     }
 }
-
 
 void updateSnow(std::vector<Precipitation>& snowflakes, std::vector<Precipitation> &groundSnow, float snowIntensity, float deltaTime)
 {

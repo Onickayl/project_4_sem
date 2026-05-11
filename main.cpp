@@ -8,7 +8,9 @@
 #include <iomanip>   
 #include <fstream>   
 
-int main()
+std::string getFilename(ExperimentType exp);
+
+int main(int argc, char* argv[])
 {
 
 // ручной режим - да/нет
@@ -17,6 +19,34 @@ int main()
 // для паузы 
     bool paused = false;      // флаг паузы
     float pauseDeltaTime = 0; // накапливаем время в паузе
+
+// режим
+    ExperimentType currentExp = ExperimentType::Normal;
+
+
+// аргументы командной строки
+    if (argc >= 2)
+    {
+        std::string arg = argv[1]; 
+
+        if (arg == "--normal")
+        {
+            currentExp = ExperimentType::Normal;
+        }
+        else if (arg == "--warming")
+        {
+            currentExp = ExperimentType::GlobalWarming;
+        }
+        else if (arg == "--drought")
+        {
+            currentExp = ExperimentType::Drought;
+        }
+        else
+        {
+            std::cout << "Please write: ./autumn [--normal|--drought|--warming]" << std::endl;
+            return 1;
+        }
+    }
     
     srand(time(nullptr));
 
@@ -103,7 +133,7 @@ int main()
     size_t num_flakes = 200;
     std::vector<Precipitation> snowflakes;
     std::vector<Precipitation> groundSnow;
-    init_Raindrops(snowflakes, num_flakes);
+    init_Snowdrops(snowflakes, num_flakes);
 
 // игровые дни
     float year_time = 0; // 0 - начало весны, 365 - конец зимы
@@ -114,7 +144,8 @@ int main()
 
 // для записи в CSV
     // Открываем CSV файл
-    std::ofstream csvFile("data_of_simulation.csv");
+    std::string csvFilename = getFilename(currentExp);
+    std::ofstream csvFile(csvFilename);
 
     if (!csvFile.is_open())
     {
@@ -123,7 +154,7 @@ int main()
     }
 
     // Записываем заголовки
-    csvFile << "Day,Season,Temp,Sun,Rain,Wind,AvgChlorophyll\n";
+    csvFile << "Day,Season,Temp,Sun,Rain,Wind,SoilWater,AvgChlorophyll\n";
     float lastRecordedDay = -1.0f;
 
 
@@ -159,9 +190,9 @@ int main()
                 // пересоздаём листья
                 init_Leaves(leaves, branches, num_leaf);
 
-                // очищаем CSV и пишем заголовки заново
+               // очищаем CSV и пишем заголовки заново
                 csvFile.close();
-                csvFile.open("data_of_simulation.csv");  
+                csvFile.open(csvFilename);  
                 csvFile << "Day,Season,Temp,Sun,Rain,Wind,AvgChlorophyll\n";
 
             }
@@ -271,7 +302,7 @@ int main()
 
         if (isRunning)
         {
-            auto_weather(year_time, deltaTime, season);
+            auto_weather(year_time, deltaTime, season, currentExp);
 
             distributeWater(leaves, branches, soilWater, deltaTime);
 
@@ -283,12 +314,12 @@ int main()
             {
                 updateRain(raindrops, rain, deltaTime);
             }
+
             // обновление листьев
             update_leaf(leaves, branches, deltaTime, season);
 
-            //updateRain(raindrops, rain, deltaTime);
 
-            // Записываем CSV каждый игровой день
+    // Записываем CSV каждый игровой день
             int currentDay = (int)year_time;
 
             if (currentDay > lastRecordedDay && currentDay <= 365)
@@ -318,6 +349,7 @@ int main()
                         << std::fixed << std::setprecision(0) << sun << ","
                         << std::fixed << std::setprecision(0) << rain << ","
                         << std::fixed << std::setprecision(0) << wind << ","
+                        << std::fixed << std::setprecision(1) << soilWater << ","
                         << std::fixed << std::setprecision(1) << avgChloro << "\n";
             }
 
@@ -426,7 +458,19 @@ int main()
     }
 
     csvFile.close();
-    std::cout << "Data saved to data_of_simulation.csv" << std::endl;
+    std::cout << "Data saved to" << csvFilename << std::endl;
 
     return 0;
+}
+
+
+std::string getFilename(ExperimentType exp)
+{
+    switch (exp)
+    {
+        case ExperimentType::Normal:        return "data_normal.csv";
+        case ExperimentType::Drought:       return "data_drought.csv";
+        case ExperimentType::GlobalWarming: return "data_warming.csv";
+        default:                            return "data_unknown.csv";
+    }
 }
