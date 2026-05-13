@@ -8,7 +8,8 @@
 #include <iomanip>   
 #include <fstream>   
 
-std::string getFilename(ExperimentType exp);
+std::string getFilename(ClimateType climate, ExperimentType exp);
+std::string climateToString(ClimateType climate);
 
 int main(int argc, char* argv[])
 {
@@ -27,31 +28,31 @@ int main(int argc, char* argv[])
 // аргументы командной строки
     if (argc >= 2)
     {
-        std::string arg = argv[1]; 
-
-        if (arg == "--normal")
+        for (int i = 1; i < argc; i++)
         {
-            currentExp = ExperimentType::Normal;
-        }
-        else if (arg == "--warming")
-        {
-            currentExp = ExperimentType::GlobalWarming;
-        }
-        else if (arg == "--drought")
-        {
-            currentExp = ExperimentType::Drought;
-        }
-        else
-        {
-            std::cout << "Please write: ./autumn [--normal|--drought|--warming]" << std::endl;
-            return 1;
+            std::string arg = argv[i];
+            
+            if (arg == "--eq")              currentClimate = ClimateType::Equatorial;
+            else if (arg == "--trop")       currentClimate = ClimateType::Tropical;
+            else if (arg == "--subtrop")    currentClimate = ClimateType::Subtropical;
+            else if (arg == "--tempOc")     currentClimate = ClimateType::TemperateOceanic;
+            else if (arg == "--tempCon")    currentClimate = ClimateType::TemperateContinental;
+            else if (arg == "--subar")      currentClimate = ClimateType::Subarctic;
+            else if (arg == "--drought")    currentExp = ExperimentType::Drought;
+            else if (arg == "--warming")    currentExp = ExperimentType::GlobalWarming;
+            else if (arg == "--normal")     currentExp = ExperimentType::Normal;
+            else
+            {
+                std::cout << "Please write: ./autumn [--eq|--trop] [--drought|--warming]" << std::endl;
+                return 1;
+            }
         }
     }
     
     srand(time(nullptr));
 
 // Создаём окно 800x600 с названием "autumn". Переменная window — это окно.
-    sf::RenderWindow window(sf::VideoMode(800, 600), "autumn");
+    sf::RenderWindow window(sf::VideoMode(800, 700), "autumn");
 
     // ограничиваем количество кадров в секунду (FPS) до 60
     window.setFramerateLimit(60);
@@ -111,12 +112,12 @@ int main(int argc, char* argv[])
 
 // ствол дерева
     sf::RectangleShape trunk(sf::Vector2f(50, 500)); // 50 вправо, 500 пикселей вниз
-    trunk.setPosition(400, 100);                     // Начинаем с Y=100, чтобы 500 пикселей вниз закончились на Y=600
+    trunk.setPosition(400, 200);                     // Начинаем с Y=200, чтобы 500 пикселей вниз закончились на Y=700
     trunk.setFillColor(sf::Color(139, 69, 19));
 
 // земля
     sf::RectangleShape ground(sf::Vector2f(800.0f, 50.0f));
-    ground.setPosition(0, 550); 
+    ground.setPosition(0, 650); 
 
 // инициализация веток
     size_t num_branch = 16;
@@ -148,7 +149,7 @@ int main(int argc, char* argv[])
 
 // для записи в CSV
     // Открываем CSV файл
-    std::string csvFilename = getFilename(currentExp);
+    std::string csvFilename = getFilename(currentClimate, currentExp);
     std::ofstream csvFile(csvFilename);
 
     if (!csvFile.is_open())
@@ -201,6 +202,7 @@ int main(int argc, char* argv[])
 
             }         
 
+            // ручные клавиши
             if (event.type == sf::Event::KeyPressed && manual == true)
             {
 
@@ -310,7 +312,7 @@ int main(int argc, char* argv[])
 
             distributeWater(leaves, branches, soilWater, deltaTime);
 
-            if (season == "Winter")
+            if (temp <= 0)
             {
                 updateSnow(snowflakes, groundSnow, rain, deltaTime);
             }
@@ -377,7 +379,7 @@ int main(int argc, char* argv[])
         else if (season == "Summer")
         {
             seasonColor = sf::Color::Yellow; 
-            ground.setFillColor(sf::Color(34, 139, 34)); 
+            ground.setFillColor(sf::Color(101, 67, 33));
         }
         else if (season == "Autumn")
         {
@@ -387,7 +389,7 @@ int main(int argc, char* argv[])
         else
         {
             seasonColor = sf::Color::Cyan; 
-            ground.setFillColor(sf::Color(240, 248, 255)); 
+            ground.setFillColor(sf::Color(101, 67, 33));
         }
 
         // прогресс внутри сезона 
@@ -431,7 +433,7 @@ int main(int argc, char* argv[])
         draw_Branch(window, branches);
         draw_Leaves(window, leaves);
 
-        if (season == "Winter")
+        if (temp <= 0)
         {
             drawSnow(window, snowflakes, groundSnow, num_flakes);
         }
@@ -443,6 +445,7 @@ int main(int argc, char* argv[])
 
         // собираем строку
         std::string text = season + " | " + 
+                            climateToString(currentClimate) + " | " +
                             "Sun: " + std::to_string((int)sun) + "%  " +
                            "Temp: " + std::to_string((int)temp) + "C  " +
                            "Rain: " + std::to_string((int)rain) + "%  " +
@@ -467,19 +470,49 @@ int main(int argc, char* argv[])
     }
 
     csvFile.close();
-    std::cout << "Data saved to" << csvFilename << std::endl;
+    std::cout << "Data saved to " << csvFilename << std::endl;
 
     return 0;
 }
 
 
-std::string getFilename(ExperimentType exp)
+std::string getFilename(ClimateType climate, ExperimentType exp)
 {
+    std::string cName;
+    switch (climate) 
+    {
+        case ClimateType::Equatorial:               cName = "equatorial"; break;
+        case ClimateType::Tropical:                 cName = "tropical"; break;
+        case ClimateType::Subtropical:              cName = "tropical"; break;
+        case ClimateType::TemperateOceanic:         cName = "tropical"; break;
+        case ClimateType::TemperateContinental:     cName = "tropical"; break;
+        case ClimateType::Subarctic:                cName = "tropical"; break;
+        default:                                    cName = "default";
+    }
+
+    std::string eName;
     switch (exp)
     {
-        case ExperimentType::Normal:        return "weather_normal.txt";
-        case ExperimentType::Drought:       return "weather_drought.txt";
-        case ExperimentType::GlobalWarming: return "weather_warming.txt";
-        default:                            return "weather_unknown.txt";
+        case ExperimentType::Normal:        eName = "normal"; break;
+        case ExperimentType::Drought:       eName = "drought"; break;
+        case ExperimentType::GlobalWarming: eName = "warming"; break;
+        default:                            eName = "default";
+    }
+
+    return "weather_" + cName + "_" + eName + ".txt";
+}
+
+std::string climateToString(ClimateType climate)
+{
+    switch (climate)
+    {
+        case ClimateType::Equatorial:           return "Equatorial";
+        case ClimateType::Tropical:             return "Tropical";
+        case ClimateType::Subtropical:          return "Subtropical";
+        case ClimateType::TemperateOceanic:     return "Temperate Oceanic";
+        case ClimateType::TemperateContinental: return "Temperate Continental";
+        case ClimateType::Subarctic:            return "Subarctic";
+        case ClimateType::Default:              return "Default";
+        default:                                return "Unknown";
     }
 }

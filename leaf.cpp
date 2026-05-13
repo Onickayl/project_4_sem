@@ -34,19 +34,17 @@ void init_Leaves(std::vector<Leaf>& leaves, std::vector<Branch>& branches, size_
         leaf.x += (rand() % 9) - 4;
         leaf.y += (rand() % 9) - 4;
 
-    /*!!!!!!!!!поменять значения для почки!!!!!!!!!!!!!!!!!!!*/
-        leaf.chlorophyll = 100;
+        
+        leaf.chlorophyll = 80 + (rand() % 20);      // 80-100
         leaf.carotenoids = 50;
-        leaf.anthocyanin = 0;
-        leaf.water = 70 + (rand() % 30);        // 70-100
-        leaf.sugar = 30 + (rand() % 40);        // 30-70
-        leaf.stickiness = 60 + (rand() % 40);
+        leaf.anthocyanin = 0 + (rand() % 3);        // 0-3
+        leaf.water = 70 + (rand() % 30);            // 70-100
+        leaf.sugar = 30 + (rand() % 40);            // 30-70
+        leaf.stickiness = 90 + (rand() % 10);       // 90-100
         leaf.state = LeafState::Bud;
 
         leaf.current_color = sf::Color::Green;  // начальный цвет
         leaf.current_color.a = 255;             // полностью непрозрачный
-
-        leaf.changeSpeed = 0.5f + (rand() % 500) / 100.0f;  // 0.5-5.5
 
         float normalizedY = (leaf.y - 100.0f) / 400.0f;
         normalizedY = std::max(0.0f, std::min(1.0f, normalizedY));
@@ -54,7 +52,7 @@ void init_Leaves(std::vector<Leaf>& leaves, std::vector<Branch>& branches, size_
 
         leaf.wakeupTemp = 3.0f + (rand() % 5);  // 3-8°C
 
-        leaf.growSpeed = 1.5f + (rand() % 200) / 100.0f;  // 1.5-3.5
+        leaf.growSpeed = 2.5f + (rand() % 200) / 100.0f;  // 2.5-3.5
 
         // Запоминаем, на какой ветке висит
         leaf.branchIndex = branchNum;
@@ -99,36 +97,7 @@ void draw_Leaves(sf::RenderWindow &window, const std::vector<Leaf>& leaves)
         {
 // Цвет для живых - меняется
 
-            float greenLevel = leaf.chlorophyll / 100.0f;
-            float redLevel = leaf.anthocyanin / 100.0f;
-
-            sf::Color color;
-
-            if (redLevel < 0.15f)
-            {
-                // нет красного — плавно зелёный -> жёлтый
-                float t = 1.0f - greenLevel;
-                color = lerpColor(sf::Color::Green, sf::Color::Yellow, t);
-            }
-            else
-            {
-                // Есть красный — смешиваем жёлтый и красный
-                sf::Color baseColor;
-                if (greenLevel > 0.3f)
-                {
-                    float t = (greenLevel - 0.3f) / 0.7f;
-                    baseColor = lerpColor(sf::Color::Yellow, sf::Color::Green, t);
-                }
-                else
-                {
-                    baseColor = sf::Color::Yellow;
-                }
-
-                float t = redLevel;
-                color = lerpColor(baseColor, sf::Color::Red, t);
-            }
-
-            leafShape.setFillColor(color);
+            leafShape.setFillColor(getLeafColor(leaf)); 
         }
 
         window.draw(leafShape);
@@ -136,19 +105,8 @@ void draw_Leaves(sf::RenderWindow &window, const std::vector<Leaf>& leaves)
 }
 
 
-
 void update_leaf(std::vector<Leaf> &leaves, std::vector<Branch>& branches, float deltaTime, std::string& season)
 {
-    /*
-    Уменьшает хлорофилл от солнца и холода
-    Увеличивает антоцианы при наличии сахара, холода и солнца
-    Каротиноиды всегда постоянны
-    Результат: листья меняют цвет в зависимости от погоды
-
-    Дождь увеличивает прилипчивость, ветер уменьшает
-    Если stickiness < 20% — лист падает
-    Результат: Листья отрываются и падают
-    */
 
     for (auto &leaf : leaves)
     {
@@ -165,7 +123,7 @@ void update_leaf(std::vector<Leaf> &leaves, std::vector<Branch>& branches, float
 
         case LeafState::Growing:
 
-            leaf.size += leaf.growSpeed * deltaTime; // лист увеличивается
+            leaf.size += leaf.growSpeed * deltaTime * 10.0f; // лист увеличивается
 
             if (leaf.size >= 7.0f)
                 leaf.state = LeafState::Mature;
@@ -180,11 +138,11 @@ void update_leaf(std::vector<Leaf> &leaves, std::vector<Branch>& branches, float
 
         case LeafState::Falling:
 
-            leaf.y += 100.0f * deltaTime; // падает вниз
+            leaf.y += 200.0f * deltaTime; // падает вниз
 
             leaf.x += sin(leaf.y * 0.1f) * 20.0f * deltaTime; // покачивание
 
-            if (leaf.y >= 590.0f)
+            if (leaf.y >= 690.0f)
                 leaf.state = LeafState::Dead;
 
             break;
@@ -195,7 +153,8 @@ void update_leaf(std::vector<Leaf> &leaves, std::vector<Branch>& branches, float
             if (season == "Winter")
             {
                 leaf.current_color.a -= 20.0f * deltaTime; // уменьшаем прозрачность
-                if (leaf.current_color.a < 10)
+
+                if (leaf.current_color.a < 30)
                 {
                     leaf.current_color.a = 0; // полностью прозрачный
                 }
@@ -210,163 +169,109 @@ void update_leaf(std::vector<Leaf> &leaves, std::vector<Branch>& branches, float
 void mature(Leaf &leaf, std::vector<Branch>& branches, float deltaTime)
 {
 
-// нормализация (0-1)
-    float S = (sun / 100.0f) * leaf.lightModifier;
-    float T = (temp + 10.0f) / 40.0f;
-    if (T < 0) T = 0;
-    if (T > 1) T = 1;
-
-    float evaporation = 0.5f;
-    leaf.water -= (S * leaf.lightModifier + T) * evaporation * deltaTime;
+    float dt = deltaTime * 10.0f;      
+    float lightLeaf = sun * leaf.lightModifier;
     
-    float W = leaf.water / 100.0f;
-    float Sugar = leaf.sugar / 100.0f;
-
-/*
-
-
-5.1 Лист потребляет воду из ветки
-waterNeeded = leaf.maxWater - leaf.water (сколько нужно для восполнения)
-
-waterReceived = branch.water * коэффициент_передачи * deltaTime / branch.leafCount
-
-Вычесть waterReceived из branch.water
-
-Прибавить к leaf.water
-
-*/
-
-// Хлорофилл (зеленый)
-
-
-    float optimal_sun;
-    if (S > 0.4f)
+// испарение волы в листе
+    if (temp > 25.0f)  
     {
-        optimal_sun = 0.9f;
-    }        
-    else
+        leaf.water -= 0.1f * (temp - 25.0f) * dt; 
+    }
+    else if (temp > 20.0f)
     {
-        float t = S / 0.4f;                     
-        optimal_sun = t * t * (3.0f - 2.0f * t); 
+        leaf.water -= 0.05f * (temp - 20.0f) * dt; 
     }
 
-    float optimal_temp = 1.0f - (T - 0.75f) * (T - 0.75f) * 3.0f; // пик при 20°C
 
-    float targetChlorophyll = 100.0f * std::max(0.0f, optimal_sun * optimal_temp * W);    
-    leaf.chlorophyll += (targetChlorophyll - leaf.chlorophyll) * deltaTime * leaf.changeSpeed;
-
-// Антоцианы (красный)
-
-    float cold_stress;
-    if (T < 0.4f) // ниже 6C
+// прилипчивость   
+    if (leaf.water < 25.0f)
     {
-        cold_stress = 1.0f + (0.4f - T) * 4.0f; // до 2.6 при -10C
+        leaf.stickiness -= 0.3f * dt;  
     }
-    else
+    
+
+// фотосинтез: нужна вода, свет и хлорофилл
+    if (leaf.water > 1.0f && lightLeaf > 10.0f && leaf.chlorophyll > 1.0f)
     {
-        cold_stress = 0.0f; // выше 6C — красный не нужен
+        leaf.water -= 0.1f * dt;
+        leaf.sugar += 0.5f * dt;
+        leaf.stickiness += 0.5f * dt;  
     }
+    
+    leaf.sugar -= 0.2f * dt;  // базовый метаболизм
+    
 
-    float targetAntho = 100.0f * cold_stress * Sugar * 2.0f;
-    targetAntho = std::min(100.0f, targetAntho);
-    leaf.anthocyanin += (targetAntho - leaf.anthocyanin) * deltaTime * 1.5f; 
 
-// Прилипчивость
-
-/*
-В mature():
-
-Вода увеличивает прилипчивость:
-
-leaf.stickiness += leaf.water * коэффициент_влажности
-
-Влажный лист гибкий и крепкий
-
-Но сильный дождь сбивает листья:
-
-if (rain > 70) leaf.stickiness -= (rain - 70) * коэффициент_сбивания
-
-Ливень механически отрывает листья
-
-Ветер сушит лист:
-
-leaf.water -= wind * коэффициент_сушки * deltaTime
-
-Сухой лист становится хрупким
-
-leaf.stickiness -= wind * коэффициент_ветра * (1.0 - leaf.water / 100.0f)
-
-Сухой лист на ветру отрывается быстрее
-*/
-
-    // Ветер влияет всегда, но нелинейно
-    if (wind > 10)
+// хлорофилл
+    // холод — плохо
+    if (temp < 10.0f)
     {
-        float windFactor = (wind - 10) / 90.0f;         // 0 - 1
-        leaf.stickiness -= wind * 0.015f * windFactor;
+        leaf.chlorophyll -= 0.2f * (10.0f - temp) * dt;
     }
-    else
+    
+    // экстремальная жара — плохо
+    if (lightLeaf > 85.0f && temp > 25.0f)
     {
-        leaf.stickiness -= wind * 0.002f; // очень слабое влияние
+        leaf.chlorophyll -= 0.2f * (lightLeaf - 75.0f) * dt;
+    }
+    
+    // ид условия — хлорофилл восстанавливается
+    if (temp > 10.0f && temp < 28.0f && lightLeaf > 15.0f && lightLeaf < 85.0f)
+    {
+        //leaf.chlorophyll += 0.2f * dt;
+        if (leaf.anthocyanin < 10.0f)  // если красного мало 
+        {
+            leaf.chlorophyll += 0.2f * dt;
+        }
     }
 
-    // дождь увеличивает прилипчивость
-    leaf.stickiness += rain * 0.01f;
-
-// Отрыв
-    if (leaf.stickiness < 20.0f)
+    
+// антоциан
+    if (temp < 12.0f && temp > -5.0f && leaf.sugar > 10.0f && leaf.water > 10.0f)
     {
-
+        leaf.sugar -= 0.5f * dt;
+        leaf.water -= 0.5f * dt;
+        leaf.anthocyanin += 0.5f * dt;
+    }
+    
+// прилипчивость
+    if (temp < 5.0f)
+    {
+        leaf.stickiness -= 0.3f * (5.0f - temp) * dt;
+    }
+    leaf.stickiness -= wind * 0.003f * dt;
+    leaf.stickiness += rain * 0.01f * dt;
+    
+// отрыв
+    if (leaf.stickiness < 10.0f)
+    {
         leaf.state = LeafState::Falling;
-
-        // Сохраняем цвет в момент отрыва
-
-            float greenLevel = leaf.chlorophyll / 100.0f;
-            float redLevel = leaf.anthocyanin / 100.0f;
-
-
-            if (redLevel < 0.15f)
-            {
-                // нет красного — плавно зелёный -> жёлтый
-                float t = 1.0f - greenLevel;
-                leaf.current_color = lerpColor(sf::Color::Green, sf::Color::Yellow, t);
-            }
-            else
-            {
-                // есть красный — смешиваем жёлтый и красный
-                sf::Color baseColor;
-                if (greenLevel > 0.3f)
-                {
-                    float t = (greenLevel - 0.3f) / 0.7f;
-                    baseColor = lerpColor(sf::Color::Yellow, sf::Color::Green, t);
-                }
-                else
-                {
-                    baseColor = sf::Color::Yellow;
-                }
-
-                float t = redLevel;
-                leaf.current_color = lerpColor(baseColor, sf::Color::Red, t);
-            }
+        leaf.current_color = getLeafColor(leaf);  
+        leaf.current_color.a = 255;
     }
-
-// ограничиваем значения
-    leaf.chlorophyll = std::max(0.0f, std::min(100.0f, leaf.chlorophyll));
-    leaf.anthocyanin = std::max(0.0f, std::min(100.0f, leaf.anthocyanin));
-    leaf.stickiness = std::max(0.0f, std::min(100.0f, leaf.stickiness));
+    
+// ограничения
+    leaf.chlorophyll  = std::max(0.0f, std::min(100.0f, leaf.chlorophyll));
+    leaf.anthocyanin  = std::max(0.0f, std::min(100.0f, leaf.anthocyanin));
+    leaf.carotenoids  = std::max(0.0f, std::min(100.0f, leaf.carotenoids));
+    leaf.water        = std::max(0.0f, std::min(100.0f, leaf.water));
+    leaf.sugar        = std::max(0.0f, std::min(100.0f, leaf.sugar));
+    leaf.stickiness   = std::max(0.0f, std::min(100.0f, leaf.stickiness));
 }
 
-void distributeWater(std::vector<Leaf>& leaves, std::vector<Branch>& branches, float& soilWater, float deltaTime)
+void distributeWater(std::vector<Leaf> &leaves, std::vector<Branch> &branches, float &soilWater, float deltaTime)
 {
+    float dt = deltaTime * 10.0f;
 
-    float totalWaterIntake = soilWater * deltaTime * 0.5f;
+    float totalWaterIntake = soilWater * dt * 0.01f;            // это сколько пойдёт в дерево
     totalWaterIntake = std::min(totalWaterIntake, soilWater);
-    float totalPriority = 0.0f;
+    soilWater -= totalWaterIntake;
+    float totalPriority = 0.0f;    
 
 // приоритет
     for (auto &branch : branches)
     {
-        float normalizedHeight = (branch.startY - 100.0f) / 400.0f;
+        float normalizedHeight = (branch.startY - 200.0f) / 400.0f;
         normalizedHeight = std::max(0.0f, std::min(1.0f, normalizedHeight));
 
         float priority = branch.leafCount * normalizedHeight * (1.0f - branch.water / 100.0f);
@@ -376,33 +281,30 @@ void distributeWater(std::vector<Leaf>& leaves, std::vector<Branch>& branches, f
 // вода веткам
     for (auto &branch : branches)
     {
-        float normalizedHeight = (branch.startY - 100.0f) / 400.0f;
+        float normalizedHeight = (branch.startY - 200.0f) / 400.0f;
         normalizedHeight = std::max(0.0f, std::min(1.0f, normalizedHeight));
 
         float priority = branch.leafCount * normalizedHeight * (1.0f - branch.water / 100.0f);
         branch.water += totalWaterIntake * priority / totalPriority;
 
-        if (branch.water > 100.0f)
-            branch.water = 100.0f;
+        branch.water  = std::max(0.0f, std::min(100.0f, branch.water));
     }
 
-    soilWater -= totalWaterIntake;
 
-// вода листьям 
+// вода по листьям 
     for (auto& leaf : leaves)
     {
-        //if (leaf.state != LeafState::Mature) continue;  
+        if (leaf.state == LeafState::Falling) continue;  
+        if (leaf.state == LeafState::Dead) continue;
         
         float waterNeeded = 100.0f - leaf.water;
-        float waterFromBranch = branches[leaf.branchIndex].water * 0.1f * deltaTime;
+        float waterFromBranch = (branches[leaf.branchIndex].water * 0.5f * dt) / branches[leaf.branchIndex].leafCount;
 
         waterFromBranch = std::min(waterFromBranch, waterNeeded);
-        waterFromBranch = std::min(waterFromBranch, branches[leaf.branchIndex].water);
         
         leaf.water += waterFromBranch;
         branches[leaf.branchIndex].water -= waterFromBranch;
     }
-
 }
 
 // LERP для цветов
@@ -417,3 +319,30 @@ sf::Color lerpColor(const sf::Color& a, const sf::Color& b, float t)
                     );
 }
 
+sf::Color getLeafColor(const Leaf& leaf)
+{
+    float greenLevel    = leaf.chlorophyll / 100.0f;
+    float redLevel      = leaf.anthocyanin / 100.0f;
+    
+    if (redLevel < 0.15f)
+    {
+        // зелёный -> жёлтый
+        float t = 1.0f - greenLevel;
+        return lerpColor(sf::Color::Green, sf::Color::Yellow, t);
+    }
+    else
+    {
+        if (greenLevel > 0.3f)
+        {
+            // много красного и зелёного
+            float t = (greenLevel - 0.3f) / 0.7f;
+            sf::Color base = lerpColor(sf::Color::Yellow, sf::Color::Green, t);
+            return lerpColor(base, sf::Color::Red, redLevel);
+        }
+        else
+        {
+            // жёлтый -> красный
+            return lerpColor(sf::Color::Yellow, sf::Color::Red, redLevel);
+        }
+    }
+}

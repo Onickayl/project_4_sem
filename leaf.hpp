@@ -34,7 +34,6 @@ struct Leaf
 
     sf::Color current_color;
 
-    float changeSpeed;      // индивидуальная скорость реакции листа, чтобы дерево желтело не синхронно
     float lightModifier;    // индивидуальный коэффициент освещенности (зависит от того, как высоко висит лист).
     float wakeupTemp;       // индивидуальная температура появления почки
     float growSpeed;        // индивидуальная скорость роста почки в лист
@@ -49,5 +48,6 @@ void update_leaf(std::vector<Leaf>& leaves, std::vector<Branch>& branches, float
 void mature(Leaf &leaf, std::vector<Branch>& branches, float deltaTime);
 void distributeWater(std::vector<Leaf>& leaves, std::vector<Branch>& branches, float& soilWater, float deltaTime);
 sf::Color lerpColor(const sf::Color& a, const sf::Color& b, float t);
+sf::Color getLeafColor(const Leaf& leaf);
 
 #endif
