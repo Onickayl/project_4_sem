@@ -21,8 +21,11 @@ int main(int argc, char* argv[])
     bool paused = false;      // флаг паузы
     float pauseDeltaTime = 0; // накапливаем время в паузе
 
-// режим
+// режим эксперимента
     ExperimentType currentExp = ExperimentType::Normal;
+
+// скорость симуляции
+    float simSpeed = 1.0f;
 
 
 // аргументы командной строки
@@ -41,6 +44,17 @@ int main(int argc, char* argv[])
             else if (arg == "--drought")    currentExp = ExperimentType::Drought;
             else if (arg == "--warming")    currentExp = ExperimentType::GlobalWarming;
             else if (arg == "--normal")     currentExp = ExperimentType::Normal;
+            else if (arg == "--speed")
+            {
+                simSpeed = std::atof(argv[i + 1]);
+                
+                if (simSpeed <= 0.0f)
+                {
+                    simSpeed = 1.0f;
+                }
+
+                i++;
+            }
             else
             {
                 std::cout << "Please write: ./autumn [--eq|--trop] [--drought|--warming]" << std::endl;
@@ -282,11 +296,26 @@ int main(int argc, char* argv[])
 
                 
         // получаем время с прошлого кадра
-        float deltaTime = deltaClock.restart().asSeconds();
+        float rawDeltaTime = deltaClock.restart().asSeconds();
         /*
         .restart() - сбрасывает секундомер в 0 и возвращает, сколько времени прошло с прошлого сброса
         .asSeconds() - возвращает это время в секундах (как число с плавающей точкой)
         */
+
+
+        float currentSpeed;
+
+        if (paused)
+        {
+            currentSpeed = 0.0f;
+        }
+        else 
+        {
+            currentSpeed = simSpeed;
+        }
+        
+        // масштабируем время
+        float deltaTime = rawDeltaTime * currentSpeed;
 
         // Ограничиваем максимальный шаг (на случай зависаний, когда может быть резкий скачок листа)
         if (deltaTime > 0.033f)
