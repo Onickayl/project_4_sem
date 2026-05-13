@@ -8,7 +8,8 @@
 #include <iomanip>   
 #include <fstream>   
 
-std::string getFilename(ClimateType climate, ExperimentType exp, bool manual);
+std::string getWeatherFilename(ClimateType climate, ExperimentType exp, bool manual);
+std::string getLeafFilename(ClimateType climate, ExperimentType exp, bool manual);
 std::string climateToString(ClimateType climate);
 
 int main(int argc, char* argv[])
@@ -166,17 +167,30 @@ int main(int argc, char* argv[])
 
 // для записи в CSV
     // Открываем CSV файл
-    std::string csvFilename = getFilename(currentClimate, currentExp, manual);
-    std::ofstream csvFile(csvFilename);
+    std::string weatherFilename = getWeatherFilename(currentClimate, currentExp, manual);
+    std::ofstream weatherFile(weatherFilename);
 
-    if (!csvFile.is_open())
+    if (!weatherFile.is_open())
+    {
+        std::cerr << "Cannot open CSV file" << std::endl;
+        return 1;
+    }
+    // Записываем заголовки
+    weatherFile << "Day,Season,Temp,Sun,Rain,Wind,SoilWater\n";
+
+
+    std::string leafFilename = getLeafFilename(currentClimate, currentExp, manual);
+    std::ofstream leafFile(leafFilename);
+
+    if (!leafFile.is_open())
     {
         std::cerr << "Cannot open CSV file" << std::endl;
         return 1;
     }
 
-    // Записываем заголовки
-    csvFile << "Day,Season,Temp,Sun,Rain,Wind,SoilWater,AvgChlorophyll\n";
+    leafFile << "Day,Season,AvgWater,AvgSugar,AvgChlorophyll,AvgAnthocyanin\n";
+
+
     float lastRecordedDay = -1.0f;
 
 
@@ -213,9 +227,13 @@ int main(int argc, char* argv[])
                 init_Leaves(leaves, branches, num_leaf);
 
                // очищаем CSV и пишем заголовки заново
-                csvFile.close();
-                csvFile.open(csvFilename);  
-                csvFile << "Day,Season,Temp,Sun,Rain,Wind,SoilWater,AvgChlorophyll\n";
+                weatherFile.close();
+                weatherFile.open(weatherFilename);  
+                weatherFile << "Day,Season,Temp,Sun,Rain,Wind,SoilWater\n";
+
+                leafFile.close();
+                leafFile.open(leafFilename);  
+                leafFile << "Day,Season,AvgWater,AvgSugar,AvgChlorophyll,AvgAnthocyanin\n";
 
             }         
 
@@ -372,30 +390,46 @@ int main(int argc, char* argv[])
                 lastRecordedDay = currentDay;
 
                 // Считаем листья по состояниям
+                float totalWater = 0.0f;
+                float totalSuger = 0.0f;
                 float totalChloro = 0.0f;
+                float totalAnth = 0.0f;
                 int matureCount = 0;
 
                 for (const auto &leaf : leaves)
                 {
                     if (leaf.state == LeafState::Mature)
                     {
+                        totalWater += leaf.water;
+                        totalSuger += leaf.sugar;
                         totalChloro += leaf.chlorophyll; 
+                        totalAnth += leaf.anthocyanin;
                         matureCount++; 
                     }
                 }
 
+
+                float avgWater = matureCount > 0 ? totalWater / matureCount : 0.0f;
+                float avgSuger = matureCount > 0 ? totalSuger / matureCount : 0.0f;
                 float avgChloro = matureCount > 0 ? totalChloro / matureCount : 0.0f;
+                float avgAnth = matureCount > 0 ? totalAnth / matureCount : 0.0f;
 
 
                 // Записываем строку
-                csvFile << currentDay << ","
+                weatherFile << currentDay << ","
                         << season << ","
                         << std::fixed << std::setprecision(1) << temp << ","
                         << std::fixed << std::setprecision(0) << sun << ","
                         << std::fixed << std::setprecision(0) << rain << ","
                         << std::fixed << std::setprecision(0) << wind << ","
-                        << std::fixed << std::setprecision(1) << soilWater << ","
-                        << std::fixed << std::setprecision(1) << avgChloro << "\n";
+                        << std::fixed << std::setprecision(1) << soilWater << "\n";
+
+                leafFile << currentDay << ","
+                         << season << ","
+                         << std::fixed << std::setprecision(1) << avgWater << ","
+                         << std::fixed << std::setprecision(1) << avgSuger << ","
+                         << std::fixed << std::setprecision(1) << avgChloro << ","
+                         << std::fixed << std::setprecision(1) << avgAnth << "\n";
             }
 
             // Если прошел год (365 дней)
@@ -518,14 +552,17 @@ int main(int argc, char* argv[])
         window.display();
     }
 
-    csvFile.close();
-    std::cout << "Data saved to " << csvFilename << std::endl;
+    weatherFile.close();
+    std::cout << "Data saved to " << weatherFilename << std::endl;
+
+    leafFile.close();
+    std::cout << "Data saved to " << leafFilename << std::endl;
 
     return 0;
 }
 
 
-std::string getFilename(ClimateType climate, ExperimentType exp, bool manual)
+std::string getWeatherFilename(ClimateType climate, ExperimentType exp, bool manual)
 {
     std::string mName;
     if (manual) 
@@ -540,12 +577,12 @@ std::string getFilename(ClimateType climate, ExperimentType exp, bool manual)
     std::string cName;
     switch (climate) 
     {
-        case ClimateType::Equatorial:               cName = "equatorial"; break;
-        case ClimateType::Tropical:                 cName = "tropical"; break;
-        case ClimateType::Subtropical:              cName = "tropical"; break;
-        case ClimateType::TemperateOceanic:         cName = "tropical"; break;
-        case ClimateType::TemperateContinental:     cName = "tropical"; break;
-        case ClimateType::Subarctic:                cName = "tropical"; break;
+        case ClimateType::Equatorial:               cName = "eq"; break;
+        case ClimateType::Tropical:                 cName = "trop"; break;
+        case ClimateType::Subtropical:              cName = "subtrop"; break;
+        case ClimateType::TemperateOceanic:         cName = "tempOc"; break;
+        case ClimateType::TemperateContinental:     cName = "tempCon"; break;
+        case ClimateType::Subarctic:                cName = "subar"; break;
         default:                                    cName = "default";
     }
 
@@ -559,6 +596,42 @@ std::string getFilename(ClimateType climate, ExperimentType exp, bool manual)
     }
 
     return "weather_" + mName + "_" + cName + "_" + eName + ".txt";
+}
+
+std::string getLeafFilename(ClimateType climate, ExperimentType exp, bool manual)
+{
+    std::string mName;
+    if (manual) 
+    {
+        mName = "man";
+    }
+    else 
+    {
+        mName = "sim";
+    }
+
+    std::string cName;
+    switch (climate) 
+    {
+        case ClimateType::Equatorial:               cName = "eq"; break;
+        case ClimateType::Tropical:                 cName = "trop"; break;
+        case ClimateType::Subtropical:              cName = "subtrop"; break;
+        case ClimateType::TemperateOceanic:         cName = "tempOc"; break;
+        case ClimateType::TemperateContinental:     cName = "tempCon"; break;
+        case ClimateType::Subarctic:                cName = "subar"; break;
+        default:                                    cName = "default";
+    }
+
+    std::string eName;
+    switch (exp)
+    {
+        case ExperimentType::Normal:        eName = "normal"; break;
+        case ExperimentType::Drought:       eName = "drought"; break;
+        case ExperimentType::GlobalWarming: eName = "warming"; break;
+        default:                            eName = "default";
+    }
+
+    return "leaf_" + mName + "_" + cName + "_" + eName + ".csv";
 }
 
 std::string climateToString(ClimateType climate)

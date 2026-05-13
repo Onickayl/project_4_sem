@@ -247,7 +247,7 @@ void updateRain(std::vector<Precipitation>& raindrops, float rainIntensity, floa
         Precipitation drop;
 
         drop.x = rand() % 800;
-        drop.y = rand() % 700; 
+        drop.y = -(rand() % 10); 
         drop.speed = speed;
         drop.length = length;
 
@@ -338,7 +338,7 @@ void updateSnow(std::vector<Precipitation>& snowflakes, std::vector<Precipitatio
         Precipitation drop;
 
         drop.x = rand() % 800;
-        drop.y = rand() % 700; 
+        drop.y = -(rand() % 10);  
         drop.speed = speed;
         drop.length = length;
 

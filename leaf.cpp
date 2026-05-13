@@ -298,7 +298,12 @@ void distributeWater(std::vector<Leaf> &leaves, std::vector<Branch> &branches, f
         if (leaf.state == LeafState::Dead) continue;
         
         float waterNeeded = 100.0f - leaf.water;
-        float waterFromBranch = (branches[leaf.branchIndex].water * 0.5f * dt) / branches[leaf.branchIndex].leafCount;
+        float waterFromBranch;
+
+        if (branches[leaf.branchIndex].leafCount > 0)
+        {
+            waterFromBranch = (branches[leaf.branchIndex].water * 0.5f * dt) / branches[leaf.branchIndex].leafCount;
+        }
 
         waterFromBranch = std::min(waterFromBranch, waterNeeded);
         
