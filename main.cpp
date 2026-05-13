@@ -8,7 +8,7 @@
 #include <iomanip>   
 #include <fstream>   
 
-std::string getFilename(ClimateType climate, ExperimentType exp);
+std::string getFilename(ClimateType climate, ExperimentType exp, bool manual);
 std::string climateToString(ClimateType climate);
 
 int main(int argc, char* argv[])
@@ -35,7 +35,9 @@ int main(int argc, char* argv[])
         {
             std::string arg = argv[i];
             
-            if (arg == "--eq")              currentClimate = ClimateType::Equatorial;
+            if (arg == "--man")             manual = true;
+            else if (arg == "--sim")        manual = false;
+            else if (arg == "--eq")         currentClimate = ClimateType::Equatorial;
             else if (arg == "--trop")       currentClimate = ClimateType::Tropical;
             else if (arg == "--subtrop")    currentClimate = ClimateType::Subtropical;
             else if (arg == "--tempOc")     currentClimate = ClimateType::TemperateOceanic;
@@ -47,7 +49,7 @@ int main(int argc, char* argv[])
             else if (arg == "--speed")
             {
                 simSpeed = std::atof(argv[i + 1]);
-                
+
                 if (simSpeed <= 0.0f)
                 {
                     simSpeed = 1.0f;
@@ -131,7 +133,8 @@ int main(int argc, char* argv[])
 
 // земля
     sf::RectangleShape ground(sf::Vector2f(800.0f, 50.0f));
-    ground.setPosition(0, 650); 
+    ground.setPosition(0, 650);
+    ground.setFillColor(sf::Color(101, 67, 33));
 
 // инициализация веток
     size_t num_branch = 16;
@@ -163,7 +166,7 @@ int main(int argc, char* argv[])
 
 // для записи в CSV
     // Открываем CSV файл
-    std::string csvFilename = getFilename(currentClimate, currentExp);
+    std::string csvFilename = getFilename(currentClimate, currentExp, manual);
     std::ofstream csvFile(csvFilename);
 
     if (!csvFile.is_open())
@@ -217,7 +220,7 @@ int main(int argc, char* argv[])
             }         
 
             // ручные клавиши
-            if (event.type == sf::Event::KeyPressed && manual == true)
+            if (event.type == sf::Event::KeyPressed && manual)
             {
 
                 // солнце - клавиши 1 и 2
@@ -331,13 +334,20 @@ int main(int argc, char* argv[])
             deltaTime = 0.0f;               // зануляем, чтобы mature не копил изменения
         }
 
-// авто-погода
+// погода 
 
         std::string season;
 
         if (isRunning)
         {
-            auto_weather(year_time, deltaTime, season, currentExp);
+            if (!manual)
+            {
+                auto_weather(year_time, deltaTime, season, currentExp);
+            }
+            else
+            {
+                year_time += deltaTime * 10.0f; 
+            }
 
             distributeWater(leaves, branches, soilWater, deltaTime);
 
@@ -389,7 +399,7 @@ int main(int argc, char* argv[])
             }
 
             // Если прошел год (365 дней)
-            if (year_time >= 365.0f)
+            if (year_time >= 365.0f && !manual)
             {
                 isRunning = false;
                 std::cout << "the end." << std::endl;
@@ -397,61 +407,57 @@ int main(int argc, char* argv[])
         }
 
 // прямоугольники прогресса сезона
-        
-        sf::Color seasonColor;
+        if (!manual)
+        {
+            sf::Color seasonColor;
 
-        if (season == "Spring")
-        {
-            seasonColor = sf::Color::Green; 
-            ground.setFillColor(sf::Color(101, 67, 33)); 
-        }
-        else if (season == "Summer")
-        {
-            seasonColor = sf::Color::Yellow; 
-            ground.setFillColor(sf::Color(101, 67, 33));
-        }
-        else if (season == "Autumn")
-        {
-            seasonColor = sf::Color::Red;
-            ground.setFillColor(sf::Color(101, 67, 33)); 
-        }
-        else
-        {
-            seasonColor = sf::Color::Cyan; 
-            ground.setFillColor(sf::Color(101, 67, 33));
-        }
-
-        // прогресс внутри сезона 
-        float phase = year_time / 365.0f;
-        float seasonProgress = (phase * 4.0f) - floor(phase * 4.0f); 
-        // floor() отбрасывает дробную часть - только целая часть
-
-        // заполняем прямоугольники
-        int filledBars = (int)(seasonProgress * numBars);           // сколько целых делений заполнено
-        float partialBar = seasonProgress * numBars - filledBars;   // дробная часть
-
-        for (int i = 0; i < numBars; i++)
-        {
-            if (i < filledBars)
+            if (season == "Spring")
             {
-                // полностью заполнен
-                barFills[i].setSize(sf::Vector2f(barWidth, barHeight));
-                barFills[i].setFillColor(seasonColor);
+                seasonColor = sf::Color::Green;
             }
-            else if (i == filledBars)
+            else if (season == "Summer")
             {
-                // частично заполнен
-                barFills[i].setSize(sf::Vector2f(barWidth * partialBar, barHeight));
-                barFills[i].setFillColor(seasonColor);
+                seasonColor = sf::Color::Yellow;
+            }
+            else if (season == "Autumn")
+            {
+                seasonColor = sf::Color::Red;
             }
             else
             {
-                // пусто
-                barFills[i].setSize(sf::Vector2f(0, barHeight));
+                seasonColor = sf::Color::Cyan;
+            }
+
+            // прогресс внутри сезона
+            float phase = year_time / 365.0f;
+            float seasonProgress = (phase * 4.0f) - floor(phase * 4.0f);
+            // floor() отбрасывает дробную часть - только целая часть
+
+            // заполняем прямоугольники
+            int filledBars = (int)(seasonProgress * numBars);         // сколько целых делений заполнено
+            float partialBar = seasonProgress * numBars - filledBars; // дробная часть
+
+            for (int i = 0; i < numBars; i++)
+            {
+                if (i < filledBars)
+                {
+                    // полностью заполнен
+                    barFills[i].setSize(sf::Vector2f(barWidth, barHeight));
+                    barFills[i].setFillColor(seasonColor);
+                }
+                else if (i == filledBars)
+                {
+                    // частично заполнен
+                    barFills[i].setSize(sf::Vector2f(barWidth * partialBar, barHeight));
+                    barFills[i].setFillColor(seasonColor);
+                }
+                else
+                {
+                    // пусто
+                    barFills[i].setSize(sf::Vector2f(0, barHeight));
+                }
             }
         }
-
-
 
         // Заливаем всё окно тёмно-синим цветом.
         window.clear(sf::Color(20, 30, 50)); // RGB: 20,30,50
@@ -470,15 +476,27 @@ int main(int argc, char* argv[])
         {
             drawRain(window, raindrops, num_drops);
         }
-        
 
-        // собираем строку
-        std::string text = season + " | " + 
-                            climateToString(currentClimate) + " | " +
-                            "Sun: " + std::to_string((int)sun) + "%  " +
-                           "Temp: " + std::to_string((int)temp) + "C  " +
-                           "Rain: " + std::to_string((int)rain) + "%  " +
-                           "Wind: " + std::to_string((int)wind) + "%";
+
+        std::string text;
+
+        if (!manual)
+        {
+            // собираем строку
+            text = season + " | " +
+                   climateToString(currentClimate) + " | " +
+                   "Sun: " + std::to_string((int)sun) + "%  " +
+                   "Temp: " + std::to_string((int)temp) + "C  " +
+                   "Rain: " + std::to_string((int)rain) + "%  " +
+                   "Wind: " + std::to_string((int)wind) + "%";
+        }
+        else
+        {
+            text = "Sun: " + std::to_string((int)sun) + "%  " +
+                   "Temp: " + std::to_string((int)temp) + "C  " +
+                   "Rain: " + std::to_string((int)rain) + "%  " +
+                   "Wind: " + std::to_string((int)wind) + "%";
+        }
 
         // устанавливаем текст, который мы собрали, в объект weatherText                   
         weatherText.setString(text);
@@ -486,13 +504,15 @@ int main(int argc, char* argv[])
         // рисуем текст
         window.draw(weatherText);
 
-        // Рисуем прямоугольники
-        for (int i = 0; i < numBars; i++)
+        if (!manual)
         {
-            window.draw(barFrames[i]);      // рамки
-            window.draw(barFills[i]);       // заполнение
+            // Рисуем прямоугольники
+            for (int i = 0; i < numBars; i++)
+            {
+                window.draw(barFrames[i]); // рамки
+                window.draw(barFills[i]);  // заполнение
+            }
         }
-
 
         // Показываем всё, что нарисовали, на экране
         window.display();
@@ -505,8 +525,18 @@ int main(int argc, char* argv[])
 }
 
 
-std::string getFilename(ClimateType climate, ExperimentType exp)
+std::string getFilename(ClimateType climate, ExperimentType exp, bool manual)
 {
+    std::string mName;
+    if (manual) 
+    {
+        mName = "man";
+    }
+    else 
+    {
+        mName = "sim";
+    }
+
     std::string cName;
     switch (climate) 
     {
@@ -528,7 +558,7 @@ std::string getFilename(ClimateType climate, ExperimentType exp)
         default:                            eName = "default";
     }
 
-    return "weather_" + cName + "_" + eName + ".txt";
+    return "weather_" + mName + "_" + cName + "_" + eName + ".txt";
 }
 
 std::string climateToString(ClimateType climate)
