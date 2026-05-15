@@ -12,7 +12,7 @@ void init_Leaves(std::vector<Leaf>& leaves, std::vector<Branch>& branches, size_
     leaves.clear();             // очищаем, если там что-то было
     leaves.reserve(num_leaf);   // выделяем память
 
-    for (int i = 0; i < num_leaf; i++) 
+    for (size_t i = 0; i < num_leaf; i++) 
     {
         Leaf leaf;
 
@@ -105,7 +105,8 @@ void draw_Leaves(sf::RenderWindow &window, const std::vector<Leaf>& leaves)
 }
 
 
-void update_leaf(std::vector<Leaf> &leaves, std::vector<Branch>& branches, float deltaTime, std::string& season)
+void update_leaf(std::vector<Leaf>& leaves, std::vector<Branch>& branches, float deltaTime, const std::string& season,
+                 float sun, float temp, float rain, float wind)
 {
 
     for (auto &leaf : leaves)
@@ -132,7 +133,7 @@ void update_leaf(std::vector<Leaf> &leaves, std::vector<Branch>& branches, float
 
         case LeafState::Mature:
 
-            mature(leaf, branches, deltaTime);
+            mature(leaf, branches, deltaTime, sun, temp, rain, wind);
 
             break;
 
@@ -166,7 +167,7 @@ void update_leaf(std::vector<Leaf> &leaves, std::vector<Branch>& branches, float
 }
 
 
-void mature(Leaf &leaf, std::vector<Branch>& branches, float deltaTime)
+void mature(Leaf& leaf, const std::vector<Branch>& branches, float deltaTime, float sun, float temp, float rain, float wind)
 {
 
     float dt = deltaTime * 10.0f;      
@@ -242,7 +243,7 @@ void mature(Leaf &leaf, std::vector<Branch>& branches, float deltaTime)
     leaf.stickiness += rain * 0.01f * dt;
     
 // отрыв
-    if (leaf.stickiness < 20.0f || leaf.chlorophyll < 15.0f)
+    if (leaf.stickiness < 20.0f || leaf.chlorophyll < 15.0f || temp <= 0)
     {
         leaf.state = LeafState::Falling;
         leaf.current_color = getLeafColor(leaf);  
@@ -259,7 +260,7 @@ void mature(Leaf &leaf, std::vector<Branch>& branches, float deltaTime)
 }
 
 
-void distributeWater(std::vector<Leaf> &leaves, std::vector<Branch> &branches, float &soilWater, float deltaTime)
+void distributeWater(std::vector<Leaf>& leaves, std::vector<Branch>& branches, float& soilWater, float deltaTime)
 {
     float dt = deltaTime * 10.0f;
 
@@ -298,7 +299,7 @@ void distributeWater(std::vector<Leaf> &leaves, std::vector<Branch> &branches, f
         if (leaf.state == LeafState::Dead) continue;
         
         float waterNeeded = 100.0f - leaf.water;
-        float waterFromBranch;
+        float waterFromBranch = 0.0f;
 
         if (branches[leaf.branchIndex].leafCount > 0)
         {

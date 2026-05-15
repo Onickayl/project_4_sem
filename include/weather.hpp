@@ -1,69 +1,59 @@
 #ifndef WEATHER_HPP
 #define WEATHER_HPP
 
+#define _USE_MATH_DEFINES // для M_PI
+
 #include <string>
-#include <iostream>
-#include <cmath>
 #include <vector>
 #include <SFML/Graphics.hpp>
 
-
-// объявление глобальных переменных (extern — значит "определены в другом месте")
-extern float sun;
-extern float temp;
-extern float rain;
-extern float wind;
-extern float soilWater;
-
 enum class ExperimentType
 {
-    Normal,             // нормальный климат
-    Drought,            // засуха
-    GlobalWarming       // глобальное потепление
+    Normal,
+    Drought,
+    GlobalWarming
 };
 
 enum class ClimateType
 {
-    Default,              // стандартная синусоида
-    Equatorial,           // экваториальный
-    Tropical,             // тропический
-    Subtropical,          // субтропический
-    TemperateOceanic,     // умеренный морской
-    TemperateContinental, // умеренно-континентальный
-    Subarctic             // субарктический
+    Default,
+    Equatorial,
+    Tropical,
+    Subtropical,
+    TemperateOceanic,
+    TemperateContinental,
+    Subarctic
 };
 
-extern ClimateType currentClimate;  // глобальная переменная климата
-
-struct Experiment 
+struct Experiment
 {
     std::string name;
-
-    float sunCoef;      // множитель яркости
-    float tempCoef;     // прибавка к температуре
-    float rainCoef;     // множитель осадков
-    float windCoef;     // множитель ветра
-    
+    float sunCoef;
+    float tempCoef;
+    float rainCoef;
+    float windCoef;
 };
 
 struct Precipitation
 {
-    float x, y;       // позиция
-    float speed;      // скорость падения
-    float length;     // размер
-
+    float x, y;
+    float speed;
+    float length;
 };
 
 float lerpMonth(const float arr[12], float phase);
-void auto_weather(float& year_time, float deltaTime, std::string& season, ExperimentType& currentExp);
+
+void auto_weather(float &year_time, float deltaTime, float &sun, float &temp, float &rain, float &wind,
+                  float &soilWater, std::string &season, ClimateType climate, ExperimentType currentExp);
 
 void init_Raindrops(std::vector<Precipitation> &raindrops, size_t num_drops);
-void updateRain(std::vector<Precipitation>& raindrops, float rainIntensity, float deltaTime);
-void drawRain(sf::RenderWindow& window, const std::vector<Precipitation>& raindrops, size_t num_drops);
+void updateRain(std::vector<Precipitation> &raindrops, float rainIntensity, float deltaTime);
+void drawRain(sf::RenderWindow &window, const std::vector<Precipitation> &raindrops, size_t num_drops, float rainIntensity);
 
 void init_Snowdrops(std::vector<Precipitation> &snowflakes, size_t num_flakes);
-void updateSnow(std::vector<Precipitation>& snowflakes, std::vector<Precipitation> &groundSnow, float snowIntensity, float deltaTime);
-void drawSnow(sf::RenderWindow &window, const std::vector<Precipitation> &snowflakes, std::vector<Precipitation> &groundSnow, size_t num_flakes);
-
+void updateSnow(std::vector<Precipitation> &snowflakes, std::vector<Precipitation> &groundSnow,
+                float snowIntensity, float deltaTime);
+void drawSnow(sf::RenderWindow &window, const std::vector<Precipitation> &snowflakes,
+              std::vector<Precipitation> &groundSnow, size_t num_flakes, float snowIntensity);
 
 #endif
